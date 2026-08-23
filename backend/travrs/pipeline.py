@@ -47,6 +47,8 @@ class InspectResult:
     errors: list[str] = field(default_factory=list)
     versions: dict[str, str] = field(default_factory=dict)
     reference_at_location: str | None = None
+    trace: list[dict] = field(default_factory=list)
+    trace_verified: bool | None = None
 
     def to_dict(self) -> dict:
         provenance = []
@@ -63,7 +65,8 @@ class InspectResult:
             "equivalents": self.equivalents,
             "checks": [c.__dict__ for c in self.checks],
             "reference_at_location": self.reference_at_location,
-            "trace": [],
+            "trace": self.trace,
+            "trace_verified": self.trace_verified,
             "errors": self.errors,
             "versions": self.versions,
         }
@@ -273,6 +276,7 @@ def inspect(
     raw: str,
     fmt: str | None = None,
     on_progress: Progress | None = None,
+    include_trace: bool = False,
 ) -> InspectResult:
     """Detect → translate_from (official) → checks → translate_to."""
     apply_defaults()
@@ -326,5 +330,21 @@ def inspect(
     result.checks.extend(ref_checks)
     result.reference_at_location = fetched
     result.equivalents = _equivalents(tr, allele, on_progress=on_progress)
+
+    if include_trace:
+        _emit(on_progress, "Re-deriving normalization + digest trace…")
+        try:
+            from travrs.trace import build_trace
+
+            result.trace, result.trace_verified = build_trace(
+                dp, tr, result.input, result.detection, allele
+            )
+        except Exception as exc:  # noqa: BLE001 — trace is additive, never fatal
+            result.trace = []
+            result.trace_verified = None
+            result.checks.append(
+                Check("trace", False, f"trace derivation failed: {type(exc).__name__}: {exc}")
+            )
+
     _emit(on_progress, "Done")
     return result

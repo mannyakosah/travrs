@@ -13,7 +13,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("TRAVRS_CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.setenv("TRAVRS_NO_CACHE", "0")
 
-    def fake_inspect(raw, fmt=None, on_progress=None):
+    def fake_inspect(raw, fmt=None, on_progress=None, include_trace=False):
         return InspectResult(
             input=raw.strip(),
             detection=Detection("hgvs", "HGVS coding / transcript (NM_007294.4:c.)"),

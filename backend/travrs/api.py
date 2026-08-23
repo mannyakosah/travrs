@@ -1,6 +1,6 @@
 """HTTP API for the same inspect pipeline the CLI uses.
 
-    pip install -e ".[web]"
+    cd backend && pip install -e ".[web]"
     travrs-serve
 """
 
@@ -74,7 +74,8 @@ class InspectRequest(BaseModel):
 
 
 def _inspect_payload(raw: str, fmt: Fmt | None, cache) -> dict[str, Any]:
-    key = f"{fmt or 'auto'}::{raw.strip()}"
+    # v2: payload now includes the trace; old cached entries must not be served
+    key = f"v2::{fmt or 'auto'}::{raw.strip()}"
     use_cache = os.environ.get("TRAVRS_NO_CACHE") != "1"
     if use_cache:
         cached = cache.get(key)
@@ -83,7 +84,7 @@ def _inspect_payload(raw: str, fmt: Fmt | None, cache) -> dict[str, Any]:
             payload["cached"] = True
             return payload
 
-    result = inspect(raw, fmt=fmt)
+    result = inspect(raw, fmt=fmt, include_trace=True)
     payload = result.to_dict()
     payload["cached"] = False
     if use_cache and (result.vrs_id or result.allele_json):
