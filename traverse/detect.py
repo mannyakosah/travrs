@@ -71,7 +71,7 @@ def detect(raw: str) -> Detection:
     if _VRS_ID_RE.match(text):
         return Detection(
             "vrs_id",
-            "VRS computed identifier — lookup is not wired yet (Step 4).",
+            "VRS computed identifier — lookup is not implemented yet.",
             parsed={"id": text},
         )
 
@@ -113,17 +113,17 @@ def detect(raw: str) -> Detection:
         )
 
     if _RSID_RE.match(text):
-        return Detection("rsid", "dbSNP rsID — registry resolve lands in Step 4.", {"rsid": text})
+        return Detection("rsid", "dbSNP rsID — registry resolve is not implemented yet.", {"rsid": text})
     if _CA_RE.match(text):
         return Detection(
             "clingen_ca",
-            "ClinGen Allele Registry ID — registry resolve lands in Step 4.",
+            "ClinGen Allele Registry ID — registry resolve is not implemented yet.",
             {"ca": text},
         )
     if _CLINVAR_RE.match(text) or text.upper().startswith(("VCV", "RCV", "SCV")):
         return Detection(
             "clinvar",
-            "ClinVar identifier — registry resolve lands in Step 4.",
+            "ClinVar identifier — registry resolve is not implemented yet.",
             {"clinvar": text},
         )
 

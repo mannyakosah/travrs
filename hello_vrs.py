@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Step 0: prove the official VRS stack works in this environment.
-
-Uses the GA4GH reference implementation (vrs-python) and public sequence
-services 
+"""Smoke-test: one HGVS string through official vrs-python + public data services.
 
     source .venv/bin/activate
     python hello_vrs.py

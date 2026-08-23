@@ -282,7 +282,7 @@ def inspect(
     if result.detection.fmt not in {"hgvs", "spdi", "gnomad", "vrs"}:
         result.errors.append(
             f"Detected {result.detection.fmt}: {result.detection.note} "
-            "Translation for this format is not in Step 1 yet."
+            "Translation for this format is not implemented yet."
         )
         return result
 
