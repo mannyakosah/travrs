@@ -3,9 +3,9 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "traverse"
+name = "travrs"
 version = "0.1.0"
-description = "TraVerse — trace any variant through the verse (VRS)"
+description = "traVRS (pronounced traverse) — trace any variant through the verse"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
@@ -25,10 +25,11 @@ web = [
 ]
 
 [project.scripts]
-vrs-explain = "traverse.cli:main"
+travrs = "travrs.cli:main"
+vrs-explain = "travrs.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["traverse*"]
+include = ["travrs*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

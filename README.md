@@ -1,10 +1,10 @@
-# TraVerse
+# traVRS
 
-**trace any variant through the verse**
+**traVRS** (pronounced *traverse*) — trace any variant through the verse.
 
 A developer-experience tool for the [GA4GH Variation Representation Specification](https://vrs.ga4gh.org) (VRS, pronounced *verse*). Paste HGVS, SPDI, gnomAD/VCF, or VRS JSON; get a normalized VRS Allele, a globally computed `ga4gh:VA.` identifier, and equivalent representations.
 
-This is **not** a reimplementation of VRS. Translation, normalization, and computed identifiers all go through the official reference library, [vrs-python](https://github.com/ga4gh/vrs-python). TraVerse wraps that machinery so a newcomer can see it work in the first 15 minutes.
+This is **not** a reimplementation of VRS. Translation, normalization, and computed identifiers all go through the official reference library, [vrs-python](https://github.com/ga4gh/vrs-python). traVRS wraps that machinery so a newcomer can see it work in the first 15 minutes.
 
 ```
 Input        NM_007294.4:c.68_69del          (BRCA1 185delAG)
@@ -19,8 +19,8 @@ No local sequence download. No local Postgres. Public SeqRepo REST + public UTA.
 ## Install
 
 ```bash
-git clone https://github.com/mannyakosah/traverse.git
-cd traverse
+git clone https://github.com/mannyakosah/travrs.git
+cd travrs
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -41,9 +41,9 @@ python hello_vrs.py
 Then explain any supported expression:
 
 ```bash
-python -m traverse.cli "NM_007294.4:c.68_69del"
-python -m traverse.cli --json "NC_000017.11:43124026:AG:"
-vrs-explain "7-140753336-A-T"
+python -m travrs.cli "NM_007294.4:c.68_69del"
+python -m travrs.cli --json "NC_000017.11:43124026:AG:"
+travrs "7-140753336-A-T"
 ```
 
 First run talks to public SeqRepo + UTA and can take 10–20 seconds. Each new CLI process pays that connect cost again.
@@ -54,8 +54,8 @@ First run talks to public SeqRepo + UTA and can take 10–20 seconds. Each new C
 `ga4gh:VA.0YDkCqUrzpmAs-rAFWpoQ0Y6gNwbIWPD`:
 
 ```bash
-python -m traverse.cli "NM_007294.4:c.68_69del"     # HGVS coding
-python -m traverse.cli "NM_007294.4:178:4:AG"       # SPDI of the same allele
+python -m travrs.cli "NM_007294.4:c.68_69del"     # HGVS coding
+python -m travrs.cli "NM_007294.4:178:4:AG"       # SPDI of the same allele
 ```
 
 **Different context → different ID.** The same BRCA1 founder mutation *on GRCh38 chr17*
@@ -63,16 +63,16 @@ is a different VRS object (`ga4gh:VA.NTCeCp4z3OjbRZnp6I1mONPrRn7i-ugU`). That is
 deliberate — VRS is context-precise:
 
 ```bash
-python -m traverse.cli "NC_000017.11:g.43124027_43124028del"
-python -m traverse.cli "NC_000017.11:43124024:4:AC"
+python -m travrs.cli "NC_000017.11:g.43124027_43124028del"
+python -m travrs.cli "NC_000017.11:43124024:4:AC"
 ```
 
 A substitution (BRAF V600E genomic). HGVS and gnomAD agree on
 `ga4gh:VA.Otc5ovrw906Ack087o1fhegB4jDRqCAe`:
 
 ```bash
-python -m traverse.cli "NC_000007.14:g.140753336A>T"
-python -m traverse.cli "7-140753336-A-T"
+python -m travrs.cli "NC_000007.14:g.140753336A>T"
+python -m travrs.cli "7-140753336-A-T"
 ```
 
 ## Data services

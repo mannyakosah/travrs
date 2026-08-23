@@ -1,4 +1,4 @@
-"""Public-service defaults so TraVerse runs with zero local data."""
+"""Public-service defaults so traVRS runs with zero local data."""
 
 from __future__ import annotations
 

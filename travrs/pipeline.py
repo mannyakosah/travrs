@@ -12,8 +12,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from traverse.detect import Detection, UnknownFormatError, detect
-from traverse.env import apply_defaults
+from travrs.detect import Detection, UnknownFormatError, detect
+from travrs.env import apply_defaults
 
 Progress = Callable[[str], None]
 
@@ -22,7 +22,7 @@ def _emit(on_progress: Progress | None, message: str) -> None:
     if on_progress is not None:
         on_progress(message)
 
-# Lazy so `python -m traverse.cli --help` does not open SeqRepo.
+# Lazy so `python -m travrs.cli --help` does not open SeqRepo.
 _translator = None
 _dataproxy = None
 
@@ -67,8 +67,12 @@ class InspectResult:
 def _versions() -> dict[str, str]:
     from importlib.metadata import PackageNotFoundError, version
 
-    out = {"traverse": "0.1.0"}
-    for pkg, key in (("ga4gh.vrs", "vrs_python"), ("ga4gh.core", "ga4gh_core")):
+    out = {}
+    for pkg, key in (
+        ("travrs", "travrs"),
+        ("ga4gh.vrs", "vrs_python"),
+        ("ga4gh.core", "ga4gh_core"),
+    ):
         try:
             out[key] = version(pkg)
         except PackageNotFoundError:

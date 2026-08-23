@@ -1,4 +1,4 @@
-from traverse.cli import main
+from travrs.cli import main
 
 if __name__ == "__main__":
     raise SystemExit(main())

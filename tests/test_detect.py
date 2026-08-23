@@ -1,4 +1,4 @@
-from traverse.detect import UnknownFormatError, detect
+from travrs.detect import UnknownFormatError, detect
 import pytest
 
 

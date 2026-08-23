@@ -1,7 +1,7 @@
 """vrs-explain — the 15-minute VRS on-ramp.
 
-    python -m traverse.cli "NM_007294.4:c.68_69del"
-    vrs-explain --json 17-43124027-CAG-C
+    python -m travrs.cli "NM_007294.4:c.68_69del"
+    travrs --json 17-43124027-CAG-C
 """
 
 from __future__ import annotations
@@ -10,8 +10,8 @@ import argparse
 import json
 import sys
 
-from traverse.detect import Detection, UnknownFormatError, detect
-from traverse.pipeline import InspectResult, inspect
+from travrs.detect import Detection, UnknownFormatError, detect
+from travrs.pipeline import InspectResult, inspect
 
 
 def _print_banner(console) -> None:
@@ -19,8 +19,8 @@ def _print_banner(console) -> None:
 
     console.print(
         Panel.fit(
-            "[bold]TraVerse[/bold]  ·  vrs-explain\n"
-            "[dim]trace any variant through the verse[/dim]",
+            "[bold]traVRS[/bold]  ·  vrs-explain\n"
+            "[dim]pronounced traverse  ·  trace any variant through the verse[/dim]",
             border_style="cyan",
         )
     )
@@ -85,13 +85,13 @@ def _print_human(result: InspectResult, *, console=None, preamble: bool = True) 
     console.print(
         f"\n[dim]vrs-python {versions.get('vrs_python', '?')}  ·  "
         f"ga4gh.core {versions.get('ga4gh_core', '?')}  ·  "
-        f"traverse {versions.get('traverse', '?')}[/dim]"
+        f"traVRS {versions.get('travrs', '?')}[/dim]"
     )
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="vrs-explain",
+        prog="travrs",
         description="Translate HGVS / SPDI / gnomAD / VRS JSON to a computed VRS identifier.",
     )
     parser.add_argument(
