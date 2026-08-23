@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from travrs.detect import Detection
-from travrs.pipeline import InspectResult
+from travrs.pipeline import JOURNEY, InspectResult
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def client(tmp_path, monkeypatch):
 
     def fake_inspect(raw, fmt=None, on_progress=None, on_stage=None, include_trace=False):
         if on_stage:
-            for name in ("detect", "translate", "identify", "verify", "equivalents"):
+            for name in JOURNEY:
                 on_stage(name)
         return InspectResult(
             input=raw.strip(),
@@ -85,7 +85,7 @@ def test_inspect_stream_emits_stages_then_result(client):
             stages.append(event["stage"])
         if event["type"] == "result":
             result = event["payload"]
-    assert stages == ["detect", "translate", "identify", "verify", "equivalents"]
+    assert stages == list(JOURNEY)
     assert result["id"] == "ga4gh:VA.0YDkCqUrzpmAs-rAFWpoQ0Y6gNwbIWPD"
 
 

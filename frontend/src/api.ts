@@ -1,6 +1,13 @@
 import type { InspectResponse } from "./types";
 
-export type JourneyStage = "detect" | "translate" | "identify" | "verify" | "equivalents";
+export type JourneyStage =
+  | "detect"
+  | "resolve"
+  | "coordinates"
+  | "normalize"
+  | "identify"
+  | "verify"
+  | "equivalents";
 
 export type InspectProgress = {
   stage?: JourneyStage;

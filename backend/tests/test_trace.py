@@ -9,7 +9,13 @@ import pytest
 from ga4gh.core import ga4gh_identify
 from ga4gh.vrs import models, normalize
 
-from travrs.trace import _RefWindow, _summary, _trace_digest, _trace_normalization
+from travrs.trace import (
+    _catalog_data,
+    _RefWindow,
+    _summary,
+    _trace_digest,
+    _trace_normalization,
+)
 
 #           0         1         2         3
 #           0123456789012345678901234567890123456789
@@ -95,3 +101,41 @@ def test_digest_trace_matches_identify():
     # level-3 payloads carry the verbatim bytes and hex
     serialize_events = [e for e in events if e["step"] == "serialize"]
     assert all(e["data"]["serialized"].startswith("{") for e in serialize_events)
+    # the widget diffs the object against the bytes, so both must ship
+    assert all(e["data"]["source_json"].startswith("{") for e in serialize_events)
+
+
+class AliasDataProxy(FakeDataProxy):
+    def get_metadata(self, identifier):
+        return {
+            "length": 83257441,
+            "alphabet": "ACGT",
+            "aliases": [
+                "GRCh38:17",
+                "GRCh38:chr17",
+                "GRCh38.p12:17",
+                "GRCh38.p12:chr17",
+                "MD5:f9a0fb01553adb183568e3eb9d8626db",
+                "NCBI:NC_000017.11",
+                "refseq:NC_000017.11",
+                "ga4gh:SQ.dLZ15tNO1Ur0IcGjwc3Sdi_0A6Yf4zm7",
+                "sha512t24u:dLZ15tNO1Ur0IcGjwc3Sdi_0A6Yf4zm7",
+            ],
+        }
+
+
+def test_catalog_names_keep_labels_and_drop_digests():
+    data = _catalog_data(AliasDataProxy(), "ga4gh:SQ.x", "NC_000017.11")
+    names = data["catalog_names"]
+
+    # the name you pasted leads; digests are not catalog names
+    assert names[0] == {"namespace": "refseq", "value": "NC_000017.11"}
+    assert not any(n["namespace"] in {"MD5", "ga4gh", "sha512t24u"} for n in names)
+    # one entry per distinct name: patch releases collapse onto the plain build
+    assert [n["value"] for n in names] == ["NC_000017.11", "17", "chr17"]
+    assert all(n["namespace"] == "GRCh38" for n in names[1:])
+    assert data["sequence_length"] == 83257441
+
+
+def test_catalog_names_absent_without_aliases():
+    assert _catalog_data(FakeDataProxy(), "ga4gh:SQ.x", "whatever") is None

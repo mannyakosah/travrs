@@ -1,30 +1,49 @@
-import { useEffect, useMemo, useState } from "react";
-import type { Check, TraceEvent, TraceGroup, TraceRuler } from "./types";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import type { JourneyStage } from "./api";
+import { formatLabel } from "./detect";
+import type { Check, TraceEvent, TraceGroup } from "./types";
+import {
+  AccessionFunnel,
+  ExpandBrackets,
+  HashFunnel,
+  IdAssembly,
+  IntervalRuler,
+  RollStage,
+  SerializeDiff,
+  StateChip,
+  TrimTapes,
+} from "./widgets";
 import "./Trace.css";
 
-const GROUPS: { key: TraceGroup; letter: string; title: string }[] = [
-  { key: "resolve", letter: "A", title: "Sequence resolution" },
-  { key: "coordinates", letter: "B", title: "Inter-residue coordinates" },
-  { key: "normalize", letter: "C", title: "Normalization (VOCA + RLE)" },
-  { key: "digest", letter: "D", title: "Computed identifier" },
+export const JOURNEY: { key: JourneyStage; label: string; subtitle: string }[] = [
+  { key: "detect", label: "Detect", subtitle: "what did you paste?" },
+  { key: "resolve", label: "Resolve", subtitle: "which exact sequence?" },
+  { key: "coordinates", label: "Coordinates", subtitle: "count the gaps" },
+  { key: "normalize", label: "Normalize", subtitle: "one canonical form" },
+  { key: "identify", label: "Identify", subtitle: "hash → identity" },
+  { key: "verify", label: "Verify", subtitle: "double-check the bases" },
+  { key: "equivalents", label: "Equivalents", subtitle: "other spellings" },
 ];
 
-export const JOURNEY: { key: string; label: string; check?: string }[] = [
-  { key: "detect", label: "Detect" },
-  { key: "translate", label: "Translate", check: "translate" },
-  { key: "identify", label: "Identify", check: "computed_id" },
-  { key: "verify", label: "Verify ref", check: "reference_fetch" },
-  { key: "equivalents", label: "Equivalents" },
-];
+const ALG: Record<string, { group: TraceGroup; letter: string; title: string }> = {
+  resolve: { group: "resolve", letter: "A", title: "Sequence resolution" },
+  coordinates: { group: "coordinates", letter: "B", title: "Inter-residue coordinates" },
+  normalize: { group: "normalize", letter: "C", title: "Normalization (VOCA + RLE)" },
+  identify: { group: "digest", letter: "D", title: "Computed identifier" },
+};
 
 export function JourneyBar({
   current,
   completed,
   failed,
+  selected,
+  onSelect,
 }: {
   current?: string | null;
   completed: ReadonlySet<string>;
   failed?: ReadonlySet<string>;
+  selected?: string | null;
+  onSelect?: (key: JourneyStage) => void;
 }) {
   return (
     <div className="pipeline" aria-live="polite">
@@ -32,13 +51,32 @@ export function JourneyBar({
         const isFailed = failed?.has(node.key);
         const isDone = completed.has(node.key);
         const isCurrent = current === node.key && !isDone;
+        const isSelected = selected === node.key;
         const cls =
           "pipeline-node" +
-          (isFailed ? " failed" : isDone ? " done" : isCurrent ? " current" : "");
+          (isFailed ? " failed" : isDone ? " done" : isCurrent ? " current" : "") +
+          (isSelected ? " selected" : "");
+        const inner = (
+          <>
+            <span className="pipeline-label">{node.label}</span>
+            <span className="pipeline-sub">{node.subtitle}</span>
+          </>
+        );
         return (
           <span key={node.key} className="pipeline-node-wrap">
-            {i > 0 && <span className="pipeline-link" />}
-            <span className={cls}>{node.label}</span>
+            {i > 0 && <span className="pipeline-link" aria-hidden />}
+            {onSelect ? (
+              <button
+                type="button"
+                className={cls}
+                onClick={() => onSelect(node.key)}
+                aria-current={isSelected || isCurrent ? "step" : undefined}
+              >
+                {inner}
+              </button>
+            ) : (
+              <span className={cls}>{inner}</span>
+            )}
           </span>
         );
       })}
@@ -66,100 +104,83 @@ function StatePairs({ obj }: { obj: Record<string, unknown> }) {
   );
 }
 
-function tickClass(value: number, which: "start" | "end"): string {
-  const long = String(value).length >= 6 ? " long" : "";
-  return `tick-label tick-${which}${long}`;
+function readText(bag: Record<string, unknown> | null, key: string): string {
+  const value = bag?.[key];
+  return typeof value === "string" ? value : "";
 }
 
-function Ruler({ ruler }: { ruler: TraceRuler }) {
-  const cells = ruler.window.split("");
-  const endTickAfter = ruler.window_start + cells.length === ruler.end;
-  return (
-    <div className="ruler" aria-label={`interval [${ruler.start}, ${ruler.end})`}>
-      <div className="ruler-row">
-        {cells.map((base, i) => {
-          const pos = ruler.window_start + i;
-          const inIval = pos >= ruler.start && pos < ruler.end;
-          const isStart = pos === ruler.start;
-          const isEnd = pos === ruler.end;
-          return (
-            <span
-              key={i}
-              className={
-                "ruler-cell" +
-                (inIval ? " in" : "") +
-                (isStart || isEnd ? " tick" : "")
-              }
-            >
-              {isStart && (
-                <span className={tickClass(ruler.start, "start")}>{ruler.start}</span>
-              )}
-              {isEnd && <span className={tickClass(ruler.end, "end")}>{ruler.end}</span>}
-              {base}
-            </span>
-          );
-        })}
-        {endTickAfter && (
-          <span className="ruler-cell tick phantom">
-            <span className={tickClass(ruler.end, "end")}>{ruler.end}</span>
-          </span>
-        )}
-      </div>
-      <div className="ruler-caption">
-        [{ruler.start}, {ruler.end})
-      </div>
-    </div>
-  );
+function stepWidget(
+  event: TraceEvent,
+  onJump: (eventId: string) => void,
+): ReactNode | null {
+  const { before, after, ruler, data } = event;
+  switch (event.step) {
+    case "sequence_digest":
+      return (
+        <AccessionFunnel
+          pasted={readText(before, "accession")}
+          digest={readText(after, "refgetAccession")}
+          data={data}
+        />
+      );
+    case "inter_residue":
+      return ruler ? <IntervalRuler ruler={ruler} interactive /> : null;
+    case "operands":
+      return <TrimTapes before={before} after={null} side={null} />;
+    case "trim_suffix":
+      return <TrimTapes before={before} after={after} side="suffix" />;
+    case "trim_prefix":
+      return <TrimTapes before={before} after={after} side="prefix" />;
+    case "left_roll":
+    case "right_roll":
+      return ruler ? (
+        <RollStage
+          ruler={ruler}
+          before={before}
+          after={after}
+          direction={event.step === "left_roll" ? "left" : "right"}
+        />
+      ) : null;
+    case "expand":
+      return ruler ? (
+        <ExpandBrackets ruler={ruler} before={before} after={after} />
+      ) : null;
+    case "encode_state":
+      return <StateChip after={after} ruler={ruler} />;
+    case "classify":
+      return after && "state_type" in after ? (
+        <StateChip after={after} ruler={ruler} />
+      ) : null;
+    case "serialize":
+      return data ? <SerializeDiff data={data} onJump={onJump} /> : null;
+    case "hash":
+      return data ? <HashFunnel data={data} /> : null;
+    case "prefix":
+      return data ? <IdAssembly data={data} /> : null;
+    default:
+      return null;
+  }
 }
 
-function HexCut({ full, keptHex }: { full: string; keptHex: string }) {
-  return (
-    <div className="hex-cut">
-      <span className="kept">{keptHex}</span>
-      <span className="cut">{full.slice(keptHex.length)}</span>
-    </div>
-  );
-}
-
-function DigestData({ data }: { data: Record<string, string> }) {
-  return (
-    <div className="digest-data">
-      {data.serialized && (
-        <div>
-          <div className="data-label">canonical serialization (the exact hashed bytes)</div>
-          <pre className="bytes">{data.serialized}</pre>
-        </div>
-      )}
-      {data.sha512_hex && (
-        <div>
-          <div className="data-label">sha-512 → keep 24 bytes → base64url</div>
-          <HexCut full={data.sha512_hex} keptHex={data.truncated_hex ?? ""} />
-          <div className="b64">{data.base64url}</div>
-        </div>
-      )}
-      {data.digest && (
-        <div className="id-assembly">
-          <span className="seg ns">{data.namespace}</span>
-          <span className="seg sep">:</span>
-          <span className="seg type">{data.type_prefix}</span>
-          <span className="seg sep">.</span>
-          <span className="seg digest">{data.digest}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Frame({ event, mode }: { event: TraceEvent; mode: Mode }) {
+function Frame({
+  event,
+  mode,
+  onJump,
+}: {
+  event: TraceEvent;
+  mode: Mode;
+  onJump: (eventId: string) => void;
+}) {
+  const widget = stepWidget(event, onJump);
   return (
     <div className="frame">
       <div className="frame-title">
         <span className="frame-id">{event.id}</span>
         {event.title}
       </div>
-      {event.ruler && <Ruler ruler={event.ruler} />}
       {event.note && <p className="frame-note">{event.note}</p>}
-      {(event.before || event.after) && (
+      {widget ?? (event.ruler && <IntervalRuler ruler={event.ruler} />)}
+      {(mode === "spec" || !widget) && (event.before || event.after) && (
         <div className="frame-states">
           {event.before && (
             <div>
@@ -175,7 +196,6 @@ function Frame({ event, mode }: { event: TraceEvent; mode: Mode }) {
           )}
         </div>
       )}
-      {mode === "spec" && event.data && <DigestData data={event.data} />}
       {(event.refs.length > 0 || event.glossary) && (
         <div className="frame-refs">
           {event.refs
@@ -194,23 +214,100 @@ function Frame({ event, mode }: { event: TraceEvent; mode: Mode }) {
   );
 }
 
+function ThinCard({
+  id,
+  title,
+  summary,
+  defaultOpen,
+  focusKey,
+  focusAt,
+  children,
+}: {
+  id: string;
+  title: string;
+  summary: string;
+  defaultOpen: boolean;
+  focusKey: string | null;
+  focusAt: number;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  useEffect(() => setOpen(defaultOpen), [defaultOpen]);
+  useEffect(() => {
+    if (focusKey === id) setOpen(true);
+  }, [focusKey, focusAt, id]);
+
+  return (
+    <div id={`journey-${id}`} className={"group-card thin" + (open ? " open" : "")}>
+      <button type="button" className="group-head" onClick={() => setOpen(!open)}>
+        <span className="group-title">{title}</span>
+        <span className="group-summary">{summary}</span>
+        <span className="group-toggle">{open ? "−" : "+"}</span>
+      </button>
+      {open && <div className="group-body">{children}</div>}
+    </div>
+  );
+}
+
 function GroupCard({
+  cardKey,
   letter,
   title,
   events,
   mode,
   defaultOpen,
+  focusKey,
+  focusAt,
 }: {
+  cardKey: string;
   letter: string;
   title: string;
   events: TraceEvent[];
   mode: Mode;
   defaultOpen: boolean;
+  focusKey: string | null;
+  focusAt: number;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const [idx, setIdx] = useState(0);
+  const [playing, setPlaying] = useState(false);
   useEffect(() => setIdx(0), [events]);
   useEffect(() => setOpen(defaultOpen), [defaultOpen]);
+  useEffect(() => {
+    if (focusKey === cardKey) setOpen(true);
+  }, [focusKey, focusAt, cardKey]);
+
+  useEffect(() => {
+    if (!playing) return;
+    if (idx >= events.length - 1) {
+      setPlaying(false);
+      return;
+    }
+    const id = window.setTimeout(() => setIdx((v) => v + 1), 1100);
+    return () => window.clearTimeout(id);
+  }, [playing, idx, events.length]);
+
+  function step(delta: number) {
+    setPlaying(false);
+    setIdx((v) => Math.min(Math.max(v + delta, 0), events.length - 1));
+  }
+
+  function togglePlay() {
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    if (idx >= events.length - 1) setIdx(0);
+    setPlaying(true);
+  }
+
+  function jump(eventId: string) {
+    const target = events.findIndex((event) => event.id === eventId);
+    if (target >= 0) {
+      setPlaying(false);
+      setIdx(target);
+    }
+  }
 
   const summary = useMemo(() => {
     const last = [...events].reverse().find((e) => e.after);
@@ -223,18 +320,18 @@ function GroupCard({
 
   const current = events[Math.min(idx, events.length - 1)];
 
-  function onKey(e: React.KeyboardEvent) {
+  function onKey(e: { key: string; preventDefault(): void }) {
     if (e.key === "ArrowRight") {
-      setIdx((v) => Math.min(v + 1, events.length - 1));
+      step(1);
       e.preventDefault();
     } else if (e.key === "ArrowLeft") {
-      setIdx((v) => Math.max(v - 1, 0));
+      step(-1);
       e.preventDefault();
     }
   }
 
   return (
-    <div className={"group-card" + (open ? " open" : "")}>
+    <div id={`journey-${cardKey}`} className={"group-card" + (open ? " open" : "")}>
       <button type="button" className="group-head" onClick={() => setOpen(!open)}>
         <span className="group-letter">{letter}</span>
         <span className="group-title">{title}</span>
@@ -243,14 +340,10 @@ function GroupCard({
       </button>
       {open && (
         <div className="group-body" tabIndex={0} onKeyDown={onKey}>
-          <Frame event={current} mode={mode} />
+          <Frame event={current} mode={mode} onJump={jump} />
           {events.length > 1 && (
             <div className="stepper">
-              <button
-                type="button"
-                onClick={() => setIdx((v) => Math.max(v - 1, 0))}
-                disabled={idx === 0}
-              >
+              <button type="button" onClick={() => step(-1)} disabled={idx === 0}>
                 ← prev
               </button>
               <span className="stepper-pos">
@@ -258,11 +351,33 @@ function GroupCard({
               </span>
               <button
                 type="button"
-                onClick={() => setIdx((v) => Math.min(v + 1, events.length - 1))}
+                onClick={() => step(1)}
                 disabled={idx === events.length - 1}
               >
                 next →
               </button>
+              <button
+                type="button"
+                className={"play" + (playing ? " on" : "")}
+                onClick={togglePlay}
+                aria-label={playing ? "pause" : "play all steps"}
+              >
+                {playing ? "❙❙ pause" : "▶ play"}
+              </button>
+              <span className="stepper-dots" aria-hidden>
+                {events.map((event, i) => (
+                  <button
+                    key={event.id}
+                    type="button"
+                    className={"dot" + (i === idx ? " on" : "")}
+                    onClick={() => {
+                      setPlaying(false);
+                      setIdx(i);
+                    }}
+                    title={`${event.id} ${event.title}`}
+                  />
+                ))}
+              </span>
             </div>
           )}
         </div>
@@ -275,14 +390,24 @@ export default function Trace({
   events,
   verified,
   checks,
+  detectedFormat,
+  detectionNote,
+  reference,
+  equivalents,
 }: {
   events: TraceEvent[];
   verified: boolean | null;
   checks: Check[];
+  detectedFormat: string;
+  detectionNote: string;
+  reference: string | null;
+  equivalents: Record<string, string[]>;
 }) {
   const [mode, setMode] = useState<Mode>(
     () => (localStorage.getItem("travrs-trace-mode") as Mode) || "learn",
   );
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  const [focusAt, setFocusAt] = useState(0);
   useEffect(() => localStorage.setItem("travrs-trace-mode", mode), [mode]);
 
   const byGroup = useMemo(() => {
@@ -296,21 +421,47 @@ export default function Trace({
     return map;
   }, [events, verified]);
 
-  const completed = useMemo(() => {
-    const done = new Set<string>(["detect", "equivalents"]);
-    if (checks.some((c) => c.name === "translate")) done.add("translate");
-    if (checks.some((c) => c.name === "computed_id")) done.add("identify");
-    if (checks.some((c) => c.name === "reference_fetch")) done.add("verify");
-    return done;
-  }, [checks]);
-
   const failed = useMemo(() => {
-    const bad = new Set<string>();
-    if (checks.some((c) => c.name === "translate" && !c.ok)) bad.add("translate");
+    const bad = new Set<JourneyStage>();
+    if (checks.some((c) => c.name === "translate" && !c.ok)) {
+      bad.add("resolve");
+      bad.add("coordinates");
+      bad.add("normalize");
+    }
     if (checks.some((c) => c.name === "computed_id" && !c.ok)) bad.add("identify");
-    if (checks.some((c) => c.name === "reference_fetch" && !c.ok)) bad.add("verify");
+    if (
+      checks.some(
+        (c) =>
+          (c.name === "reference_fetch" || c.name === "asserted_reference") && !c.ok,
+      )
+    ) {
+      bad.add("verify");
+    }
     return bad;
   }, [checks]);
+
+  const completed = useMemo(() => {
+    const done = new Set<JourneyStage>(JOURNEY.map((node) => node.key));
+    for (const key of failed) done.delete(key);
+    return done;
+  }, [failed]);
+
+  function selectStage(key: JourneyStage) {
+    setFocusKey(key);
+    setFocusAt(Date.now());
+    window.requestAnimationFrame(() => {
+      document.getElementById(`journey-${key}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }
+
+  const verifyChecks = checks.filter(
+    (c) => c.name === "reference_fetch" || c.name === "asserted_reference",
+  );
+  const firstEquivalent =
+    equivalents.hgvs?.[0] ?? equivalents.spdi?.[0] ?? "none";
 
   return (
     <section className="trace">
@@ -337,18 +488,95 @@ export default function Trace({
         </div>
       </div>
 
-      <JourneyBar completed={completed} failed={failed} />
+      <JourneyBar
+        completed={completed}
+        failed={failed}
+        selected={focusKey}
+        onSelect={selectStage}
+      />
 
-      {GROUPS.filter((g) => byGroup.has(g.key)).map((g) => (
-        <GroupCard
-          key={g.key}
-          letter={g.letter}
-          title={g.title}
-          events={byGroup.get(g.key)!}
-          mode={mode}
-          defaultOpen={mode === "spec" || g.key === "normalize"}
-        />
-      ))}
+      {JOURNEY.map((node) => {
+        if (node.key === "detect") {
+          return (
+            <ThinCard
+              key={node.key}
+              id={node.key}
+              title="Detect"
+              summary={formatLabel(detectedFormat)}
+              defaultOpen={mode === "spec"}
+              focusKey={focusKey}
+              focusAt={focusAt}
+            >
+              <p className="thin-line">
+                <span className="pair-key">{formatLabel(detectedFormat)}</span>{" "}
+                {detectionNote || "format detected"}
+              </p>
+            </ThinCard>
+          );
+        }
+        if (node.key === "verify") {
+          return (
+            <ThinCard
+              key={node.key}
+              id={node.key}
+              title="Verify"
+              summary={reference != null ? `'${reference}'` : "no bases"}
+              defaultOpen={mode === "spec" || failed.has("verify")}
+              focusKey={focusKey}
+              focusAt={focusAt}
+            >
+              {reference != null && (
+                <p className="thin-line">
+                  <span className="pair-key">reference</span> {reference === "" ? "∅" : `'${reference}'`}
+                </p>
+              )}
+              {verifyChecks.map((check) => (
+                <p key={check.name} className={"thin-line" + (check.ok ? "" : " bad")}>
+                  {check.detail}
+                </p>
+              ))}
+            </ThinCard>
+          );
+        }
+        if (node.key === "equivalents") {
+          return (
+            <ThinCard
+              key={node.key}
+              id={node.key}
+              title="Equivalents"
+              summary={firstEquivalent}
+              defaultOpen={mode === "spec"}
+              focusKey={focusKey}
+              focusAt={focusAt}
+            >
+              {Object.entries(equivalents).map(([fmt, values]) => (
+                <p key={fmt} className="thin-line">
+                  <span className="pair-key">{fmt.toUpperCase()}</span>{" "}
+                  {values.slice(0, 3).join(" · ")}
+                  {values.length > 3 ? ` +${values.length - 3}` : ""}
+                </p>
+              ))}
+            </ThinCard>
+          );
+        }
+
+        const alg = ALG[node.key];
+        const groupEvents = byGroup.get(alg.group);
+        if (!groupEvents?.length) return null;
+        return (
+          <GroupCard
+            key={node.key}
+            cardKey={node.key}
+            letter={alg.letter}
+            title={alg.title}
+            events={groupEvents}
+            mode={mode}
+            defaultOpen={mode === "spec" || alg.group === "normalize"}
+            focusKey={focusKey}
+            focusAt={focusAt}
+          />
+        );
+      })}
     </section>
   );
 }

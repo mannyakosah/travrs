@@ -86,8 +86,8 @@ def _inspect_payload(
     on_progress=None,
     no_cache: bool = False,
 ) -> dict[str, Any]:
-    # v3: paper links dropped from per-step refs
-    key = f"v3::{fmt or 'auto'}::{raw.strip()}"
+    # v4: trace events carry widget data (catalog names, source json)
+    key = f"v4::{fmt or 'auto'}::{raw.strip()}"
     use_cache = os.environ.get("TRAVRS_NO_CACHE") != "1" and not no_cache
     if use_cache:
         cached = cache.get(key)

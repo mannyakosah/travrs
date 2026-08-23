@@ -96,10 +96,7 @@ export default function App() {
           tra<span className="vrs">VRS</span>
         </div>
         <p className="subline">pronounced traverse</p>
-        <p className="lede">
-          Paste HGVS, SPDI, gnomAD/VCF, or VRS JSON. Official vrs-python
-          normalizes it and returns a computed identifier.
-        </p>
+        <p className="lede">Paste HGVS, SPDI, gnomAD/VCF, or VRS JSON.</p>
       </header>
 
       <form className="field" onSubmit={onSubmit}>
@@ -139,8 +136,15 @@ export default function App() {
       </div>
 
       {loading && (
-        <div className="live-trace">
-          <p className="status">{status ?? "Working…"}</p>
+        <div className="live-trace" aria-busy="true" aria-live="polite">
+          <p className="status">
+            <span className="activity" aria-hidden>
+              <span>.</span>
+              <span>.</span>
+              <span>.</span>
+            </span>
+            {status ?? "Detecting format…"}
+          </p>
           <JourneyBar current={liveStage} completed={liveDone} />
         </div>
       )}
@@ -173,25 +177,15 @@ export default function App() {
             <div className="location">location {result.location_id}</div>
           )}
 
-          <ul className="checks">
-            {result.checks.map((check) => (
-              <li key={check.name + check.detail}>
-                <span className={`mark ${check.ok ? "ok" : "bad"}`}>
-                  {check.ok ? "✓" : "✗"}
-                </span>
-                <span className="name">{check.name}</span>
-                <span className="detail">{check.detail}</span>
-              </li>
-            ))}
-          </ul>
-
-          {result.trace.length > 0 && (
-            <Trace
-              events={result.trace}
-              verified={result.trace_verified}
-              checks={result.checks}
-            />
-          )}
+          <Trace
+            events={result.trace}
+            verified={result.trace_verified}
+            checks={result.checks}
+            detectedFormat={result.detected_format}
+            detectionNote={result.detection_note}
+            reference={result.reference_at_location}
+            equivalents={result.equivalents}
+          />
 
           {result.allele && (
             <details className="json-block">

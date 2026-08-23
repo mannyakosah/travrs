@@ -110,6 +110,46 @@ def _ev(
     }
 
 
+_DIGEST_NS = {"md5", "seguid", "sha1", "sha512t24u", "vmc", "ga4gh"}
+_NS_RANK = {"refseq": 0, "ensembl": 1, "grch38": 2, "grch37": 3, "ncbi": 4, "lrg": 5}
+
+
+def _ns_rank(ns: str) -> tuple:
+    low = ns.lower()
+    return (_NS_RANK.get(low, 9), low != ns, len(ns), ns)
+
+
+def _catalog_data(dp: Any, alias: str, pasted: str) -> dict | None:
+    """Catalog names that all resolve to this one sequence digest.
+
+    SeqRepo reports patch-level and checksum aliases too; keep one entry per
+    distinct name and drop the digests, which are not catalog names.
+    """
+    try:
+        md = dp.get_metadata(alias)
+    except Exception:  # noqa: BLE001 — widget data is additive, never fatal
+        return None
+
+    best: dict[str, str] = {}
+    for entry in md.get("aliases") or []:
+        ns, _, value = str(entry).partition(":")
+        if not value or ns.lower() in _DIGEST_NS:
+            continue
+        if value not in best or _ns_rank(ns) < _ns_rank(best[value]):
+            best[value] = ns
+    if not best:
+        return None
+
+    names = sorted(
+        best.items(), key=lambda kv: (kv[0] != pasted, _ns_rank(kv[1]), kv[0])
+    )
+    return {
+        "catalog_names": [{"namespace": ns, "value": value} for value, ns in names[:5]],
+        "sequence_length": md.get("length"),
+        "alphabet": md.get("alphabet"),
+    }
+
+
 class _RefWindow:
     """Cached, extendable slice of one reference sequence."""
 
@@ -229,6 +269,7 @@ def _intro_events(raw_allele: Any, detection: Detection, win: _RefWindow) -> lis
             ),
             before={"accession": input_label},
             after={"refgetAccession": acc},
+            data=_catalog_data(win.dp, win.alias, input_label),
             refs=_REFS_SEQ,
             glossary="accession",
         )
@@ -691,7 +732,10 @@ def _digest_events(obj: Any, kind: str, id_prefix: str, title_noun: str) -> tupl
                 "keys sorted, UTF-8, no whitespace. Non-inherent fields (id, label, …) "
                 "are excluded. Only digest-relevant content survives."
             ),
-            data={"serialized": serialized.decode("utf-8")},
+            data={
+                "serialized": serialized.decode("utf-8"),
+                "source_json": obj.model_dump_json(exclude_none=True, by_alias=True),
+            },
             refs=_REFS_DIGEST,
         ),
         _ev(

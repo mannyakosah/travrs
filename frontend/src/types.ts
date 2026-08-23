@@ -28,6 +28,25 @@ export type TraceRuler = {
   end: number;
 };
 
+export type CatalogName = {
+  namespace: string;
+  value: string;
+};
+
+export type TraceData = {
+  serialized?: string;
+  source_json?: string;
+  sha512_hex?: string;
+  truncated_hex?: string;
+  base64url?: string;
+  namespace?: string;
+  type_prefix?: string;
+  digest?: string;
+  catalog_names?: CatalogName[];
+  sequence_length?: number;
+  alphabet?: string;
+};
+
 export type TraceGroup = "resolve" | "coordinates" | "normalize" | "digest";
 
 export type TraceEvent = {
@@ -42,7 +61,7 @@ export type TraceEvent = {
   ruler: TraceRuler | null;
   refs: TraceRef[];
   glossary: string | null;
-  data: Record<string, string> | null;
+  data: TraceData | null;
 };
 
 export type InspectResponse = {

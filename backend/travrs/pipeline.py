@@ -17,7 +17,15 @@ from travrs.env import apply_defaults
 
 Progress = Callable[[str], None]
 Stage = Callable[[str], None]
-JOURNEY = ("detect", "translate", "identify", "verify", "equivalents")
+JOURNEY = (
+    "detect",
+    "resolve",
+    "coordinates",
+    "normalize",
+    "identify",
+    "verify",
+    "equivalents",
+)
 
 
 def _emit(on_progress: Progress | None, message: str) -> None:
@@ -99,7 +107,6 @@ def get_services(on_progress: Progress | None = None):
     """Create (once) the SeqRepo dataproxy + AlleleTranslator."""
     global _translator, _dataproxy
     if _translator is not None:
-        _emit(on_progress, "Reusing SeqRepo + translator connection")
         return _dataproxy, _translator
 
     apply_defaults()
@@ -108,9 +115,7 @@ def get_services(on_progress: Progress | None = None):
 
     _emit(on_progress, "Connecting to SeqRepo REST (public sequence service)…")
     _dataproxy = create_dataproxy()
-    _emit(on_progress, "SeqRepo connected. Preparing AlleleTranslator…")
     _translator = AlleleTranslator(_dataproxy)
-    _emit(on_progress, "Translator ready")
     return _dataproxy, _translator
 
 
@@ -272,7 +277,7 @@ def _equivalents(
 
 
 _TRANSLATE_HINTS = {
-    "hgvs": "Translating HGVS → VRS (SeqRepo + UTA; first call is slow)…",
+    "hgvs": "Translating HGVS → VRS (SeqRepo + UTA)…",
     "spdi": "Translating SPDI → VRS (SeqRepo)…",
     "gnomad": "Translating gnomAD/VCF → VRS (SeqRepo)…",
     "vrs": "Loading VRS JSON…",
@@ -308,10 +313,10 @@ def inspect(
         )
         return result
 
-    _stage(on_stage, "translate")
+    _stage(on_stage, "resolve")
     dp, tr = get_services(on_progress=on_progress)
-
     _emit(on_progress, _TRANSLATE_HINTS.get(result.detection.fmt, "Translating to VRS…"))
+
     try:
         if result.detection.fmt == "vrs":
             payload = result.detection.parsed
@@ -325,6 +330,8 @@ def inspect(
 
     result.allele = allele
     result.checks.append(Check("translate", True, f"AlleleTranslator.translate_from(fmt={result.detection.fmt!r})"))
+    _stage(on_stage, "coordinates")
+    _stage(on_stage, "normalize")
     result.vrs_id = getattr(allele, "id", None)
     result.location_id = getattr(allele.location, "id", None)
     result.allele_json = json.loads(
@@ -345,7 +352,6 @@ def inspect(
     result.equivalents = _equivalents(tr, allele, on_progress=on_progress)
 
     if include_trace:
-        _emit(on_progress, "Re-deriving normalization + digest trace…")
         try:
             from travrs.trace import build_trace
 
@@ -359,5 +365,4 @@ def inspect(
                 Check("trace", False, f"trace derivation failed: {type(exc).__name__}: {exc}")
             )
 
-    _emit(on_progress, "Done")
     return result

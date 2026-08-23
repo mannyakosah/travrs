@@ -63,8 +63,9 @@ example chips).
 
 ### Motion
 
-150–200ms, ease-out, opacity and border-color only. No bounce. The spinner may
-rotate; results should not animate in.
+150–200ms, ease-out, opacity and transform only. No bounce. Teaching motion
+(activity dots, current-stage pulse, step changes) stays on even if the OS
+asks for reduced motion. This product *is* the moving explanation.
 
 ### Focus
 
@@ -85,6 +86,24 @@ replacement.
   line, detail wraps underneath.
 - **JSON** — collapsed `<details>` by default. Surface-2 well, no tree widget.
 - **Errors** — explanation first. Never a raw traceback.
+
+## Components (trace widgets)
+
+One widget per algorithm step, all in `widgets/`, all shaped the same so the
+trace, Story, and the glossary can reuse them.
+
+- **Root** — `.w`, a grid with `--cell` (base width on a tape) declared once.
+- **Hint** — every widget ends in one muted line with an accent rule on the
+  left. Idle text says what to poke; hover replaces it with the answer. Fixed
+  min-height so hovering never reflows the page.
+- **Tape** — monospace cells of `--cell`; overlays (ticks, blocks, brackets,
+  numbers) are absolutely positioned at `calc(var(--cell) * n)`, never measured.
+- **Label column** — 5.5em uppercase mono, so stacked rows line up.
+- **Colour carries meaning** — accent is the answer, `--line` is a ghost or a
+  path not taken, `--warn` is “this is not the VRS one”, strike-through plus
+  `--muted` is “excluded from the hash”.
+- **Toggles** — mono, small, 1px line; selected gets accent-dim fill. A widget
+  never has more than one.
 
 ## Do / don’t
 

@@ -135,27 +135,38 @@
   font-size: 13px;
 }
 
-.status::before {
-  content: "";
-  width: 10px;
-  height: 10px;
+.activity {
+  display: inline-flex;
+  width: 1.5em;
   flex-shrink: 0;
-  border: 2px solid var(--line);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: status-spin 0.7s linear infinite;
+  color: var(--accent);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .status::before {
-    animation: none;
-    border-color: var(--accent);
+.activity span {
+  opacity: 0.2;
+  animation: activity-dot 1.2s infinite;
+}
+
+.activity span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.activity span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes activity-dot {
+  0%,
+  20% {
+    opacity: 0.2;
   }
-}
-
-@keyframes status-spin {
-  to {
-    transform: rotate(360deg);
+  30%,
+  55% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    opacity: 0.2;
   }
 }
 
