@@ -71,7 +71,7 @@ def detect(raw: str) -> Detection:
     if _VRS_ID_RE.match(text):
         return Detection(
             "vrs_id",
-            "VRS computed identifier — lookup is not implemented yet.",
+            "VRS computed identifier. Lookup is not implemented yet.",
             parsed={"id": text},
         )
 
@@ -99,7 +99,7 @@ def detect(raw: str) -> Detection:
         if re.search(r"[+-]\d+", rest) and kind in {"c", "n", "r"}:
             extra = (
                 " Intronic / offset coordinates (e.g. c.1096-1G>C) need VRS 2.1 "
-                "RelativeAllele — vrs-python may reject this."
+                "RelativeAllele. vrs-python may reject this."
             )
         if re.search(r"\[[0-9]+\]", rest):
             extra += (
@@ -113,17 +113,17 @@ def detect(raw: str) -> Detection:
         )
 
     if _RSID_RE.match(text):
-        return Detection("rsid", "dbSNP rsID — registry resolve is not implemented yet.", {"rsid": text})
+        return Detection("rsid", "dbSNP rsID. Registry resolve is not implemented yet.", {"rsid": text})
     if _CA_RE.match(text):
         return Detection(
             "clingen_ca",
-            "ClinGen Allele Registry ID — registry resolve is not implemented yet.",
+            "ClinGen Allele Registry ID. Registry resolve is not implemented yet.",
             {"ca": text},
         )
     if _CLINVAR_RE.match(text) or text.upper().startswith(("VCV", "RCV", "SCV")):
         return Detection(
             "clinvar",
-            "ClinVar identifier — registry resolve is not implemented yet.",
+            "ClinVar identifier. Registry resolve is not implemented yet.",
             {"clinvar": text},
         )
 

@@ -95,6 +95,23 @@
   color: var(--bad);
 }
 
+.pipeline-node.current {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pipeline-node.current {
+    animation: node-pulse 1.1s ease-in-out infinite;
+  }
+}
+
+@keyframes node-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
 /* group cards */
 
 .group-card {
@@ -262,8 +279,8 @@
 .ruler {
   margin-top: var(--s-3);
   overflow-x: auto;
-  padding-top: 16px;
-  padding-bottom: var(--s-1);
+  padding-top: 18px;
+  padding-bottom: 20px;
 }
 
 .ruler-caption {
@@ -307,12 +324,24 @@
 
 .tick-label {
   position: absolute;
-  top: -16px;
   left: 0;
   transform: translateX(-50%);
   color: var(--accent);
   font-size: 10px;
   white-space: nowrap;
+}
+
+.tick-label.tick-start {
+  top: -16px;
+}
+
+.tick-label.tick-end {
+  top: auto;
+  bottom: -16px;
+}
+
+.tick-label.long {
+  font-size: 8px;
 }
 
 /* digest data (spec view) */

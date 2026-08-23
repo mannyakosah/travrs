@@ -223,7 +223,7 @@ def _intro_events(raw_allele: Any, detection: Detection, win: _RefWindow) -> lis
             "sequence_digest",
             "Accession → sequence digest",
             note=(
-                f"{input_label!r} resolves (via SeqRepo) to ga4gh:{acc} — a digest of the "
+                f"{input_label!r} resolves (via SeqRepo) to ga4gh:{acc}. A digest of the "
                 "sequence itself. The human label never enters the hash, which is why "
                 "RefSeq and Ensembl spellings of the same sequence give the same VRS ID."
             ),
@@ -252,7 +252,7 @@ def _intro_events(raw_allele: Any, detection: Detection, win: _RefWindow) -> lis
     if start is not None and end is not None:
         note = (
             f"The residue-numbered input becomes the inter-residue interval "
-            f"[{start}, {end}) — two cuts between bases. One interpretation for every "
+            f"[{start}, {end}). Two cuts between bases. One interpretation for every "
             "operation type; this is why VRS insists it is not merely '0-based'."
         )
         if detection.fmt == "spdi":
@@ -317,7 +317,7 @@ def _roll_events(
                     f"{prefix}.{iteration + 1}",
                     "normalize",
                     step,
-                    f"{direction.capitalize()} roll — stop",
+                    f"{direction.capitalize()} roll. Stop",
                     iteration=iteration + 1,
                     note=(
                         f"base {neighbor or '∅'!r} does not continue the repeat "
@@ -344,7 +344,7 @@ def _roll_events(
                 f"{prefix}.{iteration}",
                 "normalize",
                 step,
-                f"{direction.capitalize()} roll — match, permute",
+                f"{direction.capitalize()} roll. Match, permute",
                 iteration=iteration,
                 note=note,
                 before={"bound": bound, "seq": rolled},
@@ -392,7 +392,7 @@ def _trace_normalization(
                 "C0",
                 "normalize",
                 "passthrough",
-                f"State is {state_type} — no normalization",
+                f"State is {state_type}. No normalization",
                 note=(
                     "The VOCA algorithm applies to LiteralSequenceExpression states; "
                     "other states are returned unchanged by the library."
@@ -410,7 +410,7 @@ def _trace_normalization(
                 "C0",
                 "normalize",
                 "passthrough",
-                "Range coordinates — trace not derived",
+                "Range coordinates. Trace not derived",
                 note="start/end are not plain integers; showing the library result only.",
                 refs=_REFS_NORM,
             )
@@ -500,8 +500,8 @@ def _trace_normalization(
                 "Classify: reference-agreement Allele",
                 note=(
                     "Asserted state equals the reference. VRS 2.0 keeps the original "
-                    "interval and encodes the state as a ReferenceLengthExpression — "
-                    "'this region, derived from the reference, at its own length'."
+                    "interval and encodes the state as a ReferenceLengthExpression. "
+                    "'This region, derived from the reference, at its own length'."
                 ),
                 after=derived,
                 ruler=_ruler(win, start0, end0),
@@ -522,7 +522,7 @@ def _trace_normalization(
                 "C3",
                 "normalize",
                 "classify",
-                "Classify: substitution — done",
+                "Classify: substitution. Done",
                 note=(
                     f"Both sequences non-empty after trimming ({ref!r} → {alt!r}). "
                     "Substitutions have no positional ambiguity; normalization stops here."
@@ -542,7 +542,7 @@ def _trace_normalization(
             "C3",
             "normalize",
             "classify",
-            f"Classify: {'deletion' if is_deletion else 'insertion'} — roll for ambiguity",
+            f"Classify: {'deletion' if is_deletion else 'insertion'}. Roll for ambiguity",
             note=(
                 f"One side is empty; the {'deleted' if is_deletion else 'inserted'} "
                 f"sequence {seed!r} may sit anywhere in a repeat. Roll to find the bounds."
@@ -575,8 +575,8 @@ def _trace_normalization(
             "Expand to the full region of ambiguity",
             note=(
                 f"Interval widens to [{left_bound}, {right_bound}). VRS refuses to pick an "
-                "arbitrary position inside the repeat (HGVS shifts 3', VCF shifts left) — "
-                "it represents the change over the whole region."
+                "arbitrary position inside the repeat (HGVS shifts 3', VCF shifts left). "
+                "It represents the change over the whole region."
             ),
             before={"start": start, "end": end},
             after={"start": left_bound, "end": right_bound, "ref": ext_ref, "alt": ext_alt},
@@ -593,7 +593,7 @@ def _trace_normalization(
             "state_type": "LiteralSequenceExpression",
             "sequence": ext_alt,
         }
-        note = "Unambiguous insertion (no reference in the region) — state stays literal."
+        note = "Unambiguous insertion (no reference in the region). State stays literal."
     elif is_deletion:
         derived = {"start": left_bound, "end": right_bound, **_rle_state(len(ext_alt), seed_len, ext_alt)}
         note = (
@@ -623,7 +623,7 @@ def _trace_normalization(
                     "state_type": "LiteralSequenceExpression",
                     "sequence": ext_alt,
                 }
-                note = "Extended sequences have equal length — literal state."
+                note = "Extended sequences have equal length. Literal state."
             else:
                 derived = {
                     "start": left_bound,
@@ -631,7 +631,7 @@ def _trace_normalization(
                     "state_type": "LiteralSequenceExpression",
                     "sequence": ext_alt,
                 }
-                note = "Insertion is not reference-derived — state stays literal."
+                note = "Insertion is not reference-derived. State stays literal."
     events.append(
         _ev(
             "C7",
@@ -689,7 +689,7 @@ def _digest_events(obj: Any, kind: str, id_prefix: str, title_noun: str) -> tupl
             note=(
                 "Canonical JSON: nested identifiable objects replaced by their digests, "
                 "keys sorted, UTF-8, no whitespace. Non-inherent fields (id, label, …) "
-                "are excluded — only digest-relevant content survives."
+                "are excluded. Only digest-relevant content survives."
             ),
             data={"serialized": serialized.decode("utf-8")},
             refs=_REFS_DIGEST,
@@ -718,7 +718,7 @@ def _trace_digest(allele: Any) -> tuple[list[dict], bool]:
     allele_events, va_digest = _digest_events(allele, "VA", "D3", "Allele")
     # point out the recursion in the allele serialization
     allele_events[0]["note"] += (
-        f" Note the location appears as its digest ({loc_digest}) — the recursion "
+        f" Note the location appears as its digest ({loc_digest}). The recursion "
         "bottoms out at the sequence digest (SQ)."
     )
     events.extend(allele_events)
@@ -770,7 +770,7 @@ def build_trace(
                 note=(
                     "re-derived state matches the library byte for byte"
                     if norm_ok
-                    else "MISMATCH — the library result is authoritative; this trace has a bug worth reporting"
+                    else "MISMATCH. The library result is authoritative. This trace has a bug worth reporting"
                 ),
                 before=derived,
                 after=actual,

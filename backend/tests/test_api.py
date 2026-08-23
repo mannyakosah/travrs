@@ -13,7 +13,10 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setenv("TRAVRS_CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.setenv("TRAVRS_NO_CACHE", "0")
 
-    def fake_inspect(raw, fmt=None, on_progress=None, include_trace=False):
+    def fake_inspect(raw, fmt=None, on_progress=None, on_stage=None, include_trace=False):
+        if on_stage:
+            for name in ("detect", "translate", "identify", "verify", "equivalents"):
+                on_stage(name)
         return InspectResult(
             input=raw.strip(),
             detection=Detection("hgvs", "HGVS coding / transcript (NM_007294.4:c.)"),
@@ -56,6 +59,34 @@ def test_inspect_caches_second_call(client):
     assert first["cached"] is False
     assert second["cached"] is True
     assert second["id"] == first["id"]
+
+
+def test_inspect_no_cache_skips_store_lookup(client):
+    payload = {"input": "NM_007294.4:c.68_69del"}
+    client.post("/api/inspect", json=payload)
+    bypassed = client.post("/api/inspect", json={**payload, "no_cache": True}).json()
+    assert bypassed["cached"] is False
+
+
+def test_inspect_stream_emits_stages_then_result(client):
+    response = client.post(
+        "/api/inspect/stream",
+        json={"input": "NM_007294.4:c.68_69del"},
+    )
+    assert response.status_code == 200
+    stages = []
+    result = None
+    for block in response.text.strip().split("\n\n"):
+        line = next((ln for ln in block.split("\n") if ln.startswith("data: ")), None)
+        if not line:
+            continue
+        event = json.loads(line[6:])
+        if event["type"] == "stage":
+            stages.append(event["stage"])
+        if event["type"] == "result":
+            result = event["payload"]
+    assert stages == ["detect", "translate", "identify", "verify", "equivalents"]
+    assert result["id"] == "ga4gh:VA.0YDkCqUrzpmAs-rAFWpoQ0Y6gNwbIWPD"
 
 
 def test_inspect_rejects_empty(client):

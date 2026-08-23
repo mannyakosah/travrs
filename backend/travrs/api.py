@@ -6,17 +6,21 @@
 
 from __future__ import annotations
 
+import json
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from queue import Queue
+from threading import Thread
 from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from travrs.env import apply_defaults
-from travrs.pipeline import inspect
+from travrs.pipeline import JOURNEY, inspect
 
 Fmt = Literal["hgvs", "spdi", "gnomad", "vrs"]
 _MAX_INPUT = 10_000
@@ -68,23 +72,40 @@ class InspectRequest(BaseModel):
     input: str = Field(..., min_length=1, max_length=_MAX_INPUT)
     format: Fmt | None = None
     fmt: Fmt | None = None
+    no_cache: bool = False
 
     def resolved_fmt(self) -> Fmt | None:
         return self.format or self.fmt
 
 
-def _inspect_payload(raw: str, fmt: Fmt | None, cache) -> dict[str, Any]:
+def _inspect_payload(
+    raw: str,
+    fmt: Fmt | None,
+    cache,
+    on_stage=None,
+    on_progress=None,
+    no_cache: bool = False,
+) -> dict[str, Any]:
     # v3: paper links dropped from per-step refs
     key = f"v3::{fmt or 'auto'}::{raw.strip()}"
-    use_cache = os.environ.get("TRAVRS_NO_CACHE") != "1"
+    use_cache = os.environ.get("TRAVRS_NO_CACHE") != "1" and not no_cache
     if use_cache:
         cached = cache.get(key)
         if cached is not None:
             payload = dict(cached)
             payload["cached"] = True
+            if on_stage is not None:
+                for name in JOURNEY:
+                    on_stage(name)
             return payload
 
-    result = inspect(raw, fmt=fmt, include_trace=True)
+    result = inspect(
+        raw,
+        fmt=fmt,
+        include_trace=True,
+        on_stage=on_stage,
+        on_progress=on_progress,
+    )
     payload = result.to_dict()
     payload["cached"] = False
     if use_cache and (result.vrs_id or result.allele_json):
@@ -112,7 +133,57 @@ def api_inspect(body: InspectRequest) -> dict[str, Any]:
     text = body.input.strip()
     if not text:
         raise HTTPException(status_code=422, detail="input is empty")
-    return _inspect_payload(text, body.resolved_fmt(), app.state.cache)
+    return _inspect_payload(
+        text, body.resolved_fmt(), app.state.cache, no_cache=body.no_cache
+    )
+
+
+@app.post("/api/inspect/stream")
+def api_inspect_stream(body: InspectRequest):
+    text = body.input.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="input is empty")
+
+    cache = app.state.cache
+    fmt = body.resolved_fmt()
+
+    def events():
+        q: Queue = Queue()
+
+        def on_stage(name: str) -> None:
+            q.put({"type": "stage", "stage": name})
+
+        def on_progress(message: str) -> None:
+            q.put({"type": "progress", "message": message})
+
+        def work() -> None:
+            try:
+                payload = _inspect_payload(
+                    text,
+                    fmt,
+                    cache,
+                    on_stage=on_stage,
+                    on_progress=on_progress,
+                    no_cache=body.no_cache,
+                )
+                q.put({"type": "result", "payload": payload})
+            except Exception as exc:  # noqa: BLE001
+                q.put({"type": "error", "detail": f"{type(exc).__name__}: {exc}"})
+            finally:
+                q.put(None)
+
+        Thread(target=work, daemon=True).start()
+        while True:
+            item = q.get()
+            if item is None:
+                break
+            yield f"data: {json.dumps(item)}\n\n"
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 def main() -> None:

@@ -40,7 +40,7 @@ export function formatLabel(fmt: DetectedFormat | string): string {
     clinvar: "CLINVAR",
     rsid: "RSID",
     clingen_ca: "CLINGEN",
-    unknown: "—",
+    unknown: "·",
   };
   return labels[fmt] ?? fmt.toUpperCase();
 }

@@ -16,11 +16,18 @@ from travrs.detect import Detection, UnknownFormatError, detect
 from travrs.env import apply_defaults
 
 Progress = Callable[[str], None]
+Stage = Callable[[str], None]
+JOURNEY = ("detect", "translate", "identify", "verify", "equivalents")
 
 
 def _emit(on_progress: Progress | None, message: str) -> None:
     if on_progress is not None:
         on_progress(message)
+
+
+def _stage(on_stage: Stage | None, name: str) -> None:
+    if on_stage is not None:
+        on_stage(name)
 
 # Lazy so `python -m travrs.cli --help` does not open SeqRepo.
 _translator = None
@@ -176,7 +183,7 @@ def _asserted_ref_from_input(detection: Detection, raw: str) -> tuple[str | None
     if detection.fmt == "spdi":
         deleted = parsed.get("deleted") or ""
         if deleted.isdigit():
-            return None, "SPDI used a deletion *length*, not bases — nothing to compare"
+            return None, "SPDI used a deletion *length*, not bases. Nothing to compare"
         if deleted:
             return deleted.upper(), "SPDI deleted sequence"
         return "", "SPDI insertion (empty deleted sequence)"
@@ -239,7 +246,7 @@ def _reference_checks(dp, allele: Any, detection: Detection, raw: str) -> tuple[
     else:
         ok, detail = (
             True,
-            f"{source} {asserted!r} vs location {fetched!r} — lengths differ "
+            f"{source} {asserted!r} vs location {fetched!r}. Lengths differ "
             "after normalization; not treated as a mismatch",
         )
     checks.append(Check("asserted_reference", ok, detail))
@@ -276,6 +283,7 @@ def inspect(
     raw: str,
     fmt: str | None = None,
     on_progress: Progress | None = None,
+    on_stage: Stage | None = None,
     include_trace: bool = False,
 ) -> InspectResult:
     """Detect → translate_from (official) → checks → translate_to."""
@@ -285,6 +293,7 @@ def inspect(
         detection=Detection("unknown", ""),
         versions=_versions(),
     )
+    _stage(on_stage, "detect")
     _emit(on_progress, "Detecting format…")
     try:
         result.detection = detect(raw) if fmt is None else Detection(fmt, f"forced format={fmt}")
@@ -299,6 +308,7 @@ def inspect(
         )
         return result
 
+    _stage(on_stage, "translate")
     dp, tr = get_services(on_progress=on_progress)
 
     _emit(on_progress, _TRANSLATE_HINTS.get(result.detection.fmt, "Translating to VRS…"))
@@ -320,15 +330,18 @@ def inspect(
     result.allele_json = json.loads(
         allele.model_dump_json(exclude_none=True, by_alias=True)
     )
+    _stage(on_stage, "identify")
     if result.vrs_id:
         result.checks.append(Check("computed_id", True, result.vrs_id))
     else:
         result.checks.append(Check("computed_id", False, "translator did not attach an id"))
 
+    _stage(on_stage, "verify")
     _emit(on_progress, "Fetching reference bases from SeqRepo…")
     ref_checks, fetched = _reference_checks(dp, allele, result.detection, result.input)
     result.checks.extend(ref_checks)
     result.reference_at_location = fetched
+    _stage(on_stage, "equivalents")
     result.equivalents = _equivalents(tr, allele, on_progress=on_progress)
 
     if include_trace:

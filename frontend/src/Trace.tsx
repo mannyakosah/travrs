@@ -9,13 +9,42 @@ const GROUPS: { key: TraceGroup; letter: string; title: string }[] = [
   { key: "digest", letter: "D", title: "Computed identifier" },
 ];
 
-const PIPELINE: { key: string; label: string; check?: string }[] = [
+export const JOURNEY: { key: string; label: string; check?: string }[] = [
   { key: "detect", label: "Detect" },
   { key: "translate", label: "Translate", check: "translate" },
   { key: "identify", label: "Identify", check: "computed_id" },
   { key: "verify", label: "Verify ref", check: "reference_fetch" },
   { key: "equivalents", label: "Equivalents" },
 ];
+
+export function JourneyBar({
+  current,
+  completed,
+  failed,
+}: {
+  current?: string | null;
+  completed: ReadonlySet<string>;
+  failed?: ReadonlySet<string>;
+}) {
+  return (
+    <div className="pipeline" aria-live="polite">
+      {JOURNEY.map((node, i) => {
+        const isFailed = failed?.has(node.key);
+        const isDone = completed.has(node.key);
+        const isCurrent = current === node.key && !isDone;
+        const cls =
+          "pipeline-node" +
+          (isFailed ? " failed" : isDone ? " done" : isCurrent ? " current" : "");
+        return (
+          <span key={node.key} className="pipeline-node-wrap">
+            {i > 0 && <span className="pipeline-link" />}
+            <span className={cls}>{node.label}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 type Mode = "learn" | "spec";
 
@@ -37,11 +66,9 @@ function StatePairs({ obj }: { obj: Record<string, unknown> }) {
   );
 }
 
-function tickLabel(pos: number, start: number, end: number): string | null {
-  const gap = end - start;
-  if (pos === start) return String(start);
-  if (pos === end) return gap >= 6 ? String(end) : `+${gap}`;
-  return null;
+function tickClass(value: number, which: "start" | "end"): string {
+  const long = String(value).length >= 6 ? " long" : "";
+  return `tick-label tick-${which}${long}`;
 }
 
 function Ruler({ ruler }: { ruler: TraceRuler }) {
@@ -53,25 +80,28 @@ function Ruler({ ruler }: { ruler: TraceRuler }) {
         {cells.map((base, i) => {
           const pos = ruler.window_start + i;
           const inIval = pos >= ruler.start && pos < ruler.end;
-          const isTick = pos === ruler.start || pos === ruler.end;
-          const label = isTick ? tickLabel(pos, ruler.start, ruler.end) : null;
+          const isStart = pos === ruler.start;
+          const isEnd = pos === ruler.end;
           return (
             <span
               key={i}
               className={
                 "ruler-cell" +
                 (inIval ? " in" : "") +
-                (isTick ? " tick" : "")
+                (isStart || isEnd ? " tick" : "")
               }
             >
-              {label && <span className="tick-label">{label}</span>}
+              {isStart && (
+                <span className={tickClass(ruler.start, "start")}>{ruler.start}</span>
+              )}
+              {isEnd && <span className={tickClass(ruler.end, "end")}>{ruler.end}</span>}
               {base}
             </span>
           );
         })}
         {endTickAfter && (
           <span className="ruler-cell tick phantom">
-            <span className="tick-label">{tickLabel(ruler.end, ruler.start, ruler.end)}</span>
+            <span className={tickClass(ruler.end, "end")}>{ruler.end}</span>
           </span>
         )}
       </div>
@@ -266,11 +296,21 @@ export default function Trace({
     return map;
   }, [events, verified]);
 
-  const checkOk = (name?: string) => {
-    if (!name) return true;
-    const check = checks.find((c) => c.name === name);
-    return check ? check.ok : true;
-  };
+  const completed = useMemo(() => {
+    const done = new Set<string>(["detect", "equivalents"]);
+    if (checks.some((c) => c.name === "translate")) done.add("translate");
+    if (checks.some((c) => c.name === "computed_id")) done.add("identify");
+    if (checks.some((c) => c.name === "reference_fetch")) done.add("verify");
+    return done;
+  }, [checks]);
+
+  const failed = useMemo(() => {
+    const bad = new Set<string>();
+    if (checks.some((c) => c.name === "translate" && !c.ok)) bad.add("translate");
+    if (checks.some((c) => c.name === "computed_id" && !c.ok)) bad.add("identify");
+    if (checks.some((c) => c.name === "reference_fetch" && !c.ok)) bad.add("verify");
+    return bad;
+  }, [checks]);
 
   return (
     <section className="trace">
@@ -297,16 +337,7 @@ export default function Trace({
         </div>
       </div>
 
-      <div className="pipeline">
-        {PIPELINE.map((node, i) => (
-          <span key={node.key} className="pipeline-node-wrap">
-            {i > 0 && <span className="pipeline-link" />}
-            <span className={"pipeline-node" + (checkOk(node.check) ? " done" : " failed")}>
-              {node.label}
-            </span>
-          </span>
-        ))}
-      </div>
+      <JourneyBar completed={completed} failed={failed} />
 
       {GROUPS.filter((g) => byGroup.has(g.key)).map((g) => (
         <GroupCard

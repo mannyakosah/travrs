@@ -1,8 +1,8 @@
 import { FormEvent, useMemo, useState } from "react";
-import { inspectVariant } from "./api";
+import { inspectVariant, type JourneyStage } from "./api";
 import { detectFormat, formatLabel } from "./detect";
 import { EXAMPLES } from "./examples";
-import Trace from "./Trace";
+import Trace, { JourneyBar, JOURNEY } from "./Trace";
 import type { InspectResponse } from "./types";
 import "./App.css";
 
@@ -28,6 +28,9 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<InspectResponse | null>(null);
   const [copied, setCopied] = useState(false);
+  const [liveStage, setLiveStage] = useState<JourneyStage | null>(null);
+  const [liveDone, setLiveDone] = useState<Set<string>>(() => new Set());
+  const [status, setStatus] = useState<string | null>(null);
 
   const liveFormat = useMemo(() => detectFormat(input), [input]);
 
@@ -36,10 +39,27 @@ export default function App() {
     if (!next) return;
     setInput(next);
     setLoading(true);
+    setResult(null);
     setError(null);
     setCopied(false);
+    setLiveStage("detect");
+    setLiveDone(new Set());
+    setStatus("Detecting format…");
     try {
-      const payload = await inspectVariant(next);
+      const payload = await inspectVariant(next, (event) => {
+        if (event.stage) {
+          setLiveStage(event.stage);
+          setLiveDone((prev) => {
+            const nextDone = new Set(prev);
+            const idx = JOURNEY.findIndex((node) => node.key === event.stage);
+            for (const node of JOURNEY.slice(0, Math.max(idx, 0))) {
+              nextDone.add(node.key);
+            }
+            return nextDone;
+          });
+        }
+        if (event.message) setStatus(event.message);
+      });
       setResult(payload);
     } catch (err) {
       setResult(null);
@@ -119,11 +139,10 @@ export default function App() {
       </div>
 
       {loading && (
-        <p className="status">
-          {result?.cached
-            ? "Looking up…"
-            : "Translating via vrs-python (SeqRepo + UTA)…"}
-        </p>
+        <div className="live-trace">
+          <p className="status">{status ?? "Working…"}</p>
+          <JourneyBar current={liveStage} completed={liveDone} />
+        </div>
       )}
 
       {error && (
@@ -135,13 +154,13 @@ export default function App() {
 
       {failed && (
         <div className="error">
-          <h2>Not a VRS Allele — yet</h2>
+          <h2>Not a VRS Allele yet</h2>
           <p>{explainFailure(result)}</p>
           {result.detection_note && <pre>{result.detection_note}</pre>}
         </div>
       )}
 
-      {result?.id && (
+      {!loading && result?.id && (
         <section className="identity">
           <p className="section-label">Computed identifier</p>
           <div className="id-row">
@@ -153,7 +172,6 @@ export default function App() {
           {result.location_id && (
             <div className="location">location {result.location_id}</div>
           )}
-          {result.cached && <div className="location">served from cache</div>}
 
           <ul className="checks">
             {result.checks.map((check) => (
