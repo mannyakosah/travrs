@@ -1,0 +1,130 @@
+"""HTTP API for the same inspect pipeline the CLI uses.
+
+    pip install -e ".[web]"
+    travrs-serve
+"""
+
+from __future__ import annotations
+
+import os
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any, Literal
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
+from travrs.env import apply_defaults
+from travrs.pipeline import inspect
+
+Fmt = Literal["hgvs", "spdi", "gnomad", "vrs"]
+_MAX_INPUT = 10_000
+
+
+def _cache():
+    from diskcache import Cache
+
+    root = Path(os.environ.get("TRAVRS_CACHE_DIR", ".cache/travrs"))
+    root.mkdir(parents=True, exist_ok=True)
+    return Cache(str(root))
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    apply_defaults()
+    try:
+        from travrs.pipeline import get_services
+
+        get_services()
+    except Exception:
+        # First request will retry; do not fail process startup.
+        pass
+    app.state.cache = _cache()
+    yield
+    app.state.cache.close()
+
+
+app = FastAPI(
+    title="traVRS",
+    summary="traVRS (pronounced traverse) — inspect a variant as a VRS Allele",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+    ],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+
+class InspectRequest(BaseModel):
+    input: str = Field(..., min_length=1, max_length=_MAX_INPUT)
+    format: Fmt | None = None
+    fmt: Fmt | None = None
+
+    def resolved_fmt(self) -> Fmt | None:
+        return self.format or self.fmt
+
+
+def _inspect_payload(raw: str, fmt: Fmt | None, cache) -> dict[str, Any]:
+    key = f"{fmt or 'auto'}::{raw.strip()}"
+    use_cache = os.environ.get("TRAVRS_NO_CACHE") != "1"
+    if use_cache:
+        cached = cache.get(key)
+        if cached is not None:
+            payload = dict(cached)
+            payload["cached"] = True
+            return payload
+
+    result = inspect(raw, fmt=fmt)
+    payload = result.to_dict()
+    payload["cached"] = False
+    if use_cache and (result.vrs_id or result.allele_json):
+        cache.set(key, payload, expire=int(os.environ.get("TRAVRS_CACHE_TTL", "86400")))
+    return payload
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    return {
+        "name": "traVRS",
+        "pronunciation": "traverse",
+        "docs": "/docs",
+        "inspect": "POST /api/inspect",
+    }
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.post("/api/inspect")
+def api_inspect(body: InspectRequest) -> dict[str, Any]:
+    text = body.input.strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="input is empty")
+    return _inspect_payload(text, body.resolved_fmt(), app.state.cache)
+
+
+def main() -> None:
+    import uvicorn
+
+    apply_defaults()
+    uvicorn.run(
+        "travrs.api:app",
+        host=os.environ.get("TRAVRS_HOST", "127.0.0.1"),
+        port=int(os.environ.get("TRAVRS_PORT", "8000")),
+        reload=os.environ.get("TRAVRS_RELOAD", "1") == "1",
+    )
+
+
+if __name__ == "__main__":
+    main()

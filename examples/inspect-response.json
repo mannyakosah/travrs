@@ -1,0 +1,56 @@
+{
+  "input": "NM_007294.4:c.68_69del",
+  "detected_format": "hgvs",
+  "detection_note": "HGVS coding / transcript (NM_007294.4:c.)",
+  "provenance": [
+    "HGVS coding / transcript (NM_007294.4:c.)"
+  ],
+  "id": "ga4gh:VA.0YDkCqUrzpmAs-rAFWpoQ0Y6gNwbIWPD",
+  "location_id": "ga4gh:SL.l3eqhHntcrLS-eWKDLXWi5EmB7eX7hgA",
+  "allele": {
+    "id": "ga4gh:VA.0YDkCqUrzpmAs-rAFWpoQ0Y6gNwbIWPD",
+    "type": "Allele",
+    "digest": "0YDkCqUrzpmAs-rAFWpoQ0Y6gNwbIWPD",
+    "location": {
+      "id": "ga4gh:SL.l3eqhHntcrLS-eWKDLXWi5EmB7eX7hgA",
+      "type": "SequenceLocation",
+      "digest": "l3eqhHntcrLS-eWKDLXWi5EmB7eX7hgA",
+      "sequenceReference": {
+        "type": "SequenceReference",
+        "refgetAccession": "SQ.oR9jzdHf6J23TozeyuvTXtwlm6PpUHHl"
+      },
+      "start": 178,
+      "end": 182
+    },
+    "state": {
+      "type": "ReferenceLengthExpression",
+      "length": 2,
+      "sequence": "AG",
+      "repeatSubunitLength": 2
+    }
+  },
+  "equivalents": {
+    "hgvs": ["NM_007294.4:c.68_69del"],
+    "spdi": ["NM_007294.4:178:4:AG"]
+  },
+  "checks": [
+    {
+      "name": "translate",
+      "ok": true,
+      "detail": "AlleleTranslator.translate_from(fmt='hgvs')"
+    },
+    {
+      "name": "computed_id",
+      "ok": true,
+      "detail": "ga4gh:VA.0YDkCqUrzpmAs-rAFWpoQ0Y6gNwbIWPD"
+    }
+  ],
+  "reference_at_location": "AGAG",
+  "trace": [],
+  "errors": [],
+  "versions": {
+    "travrs": "0.1.0",
+    "vrs_python": "2.3.3"
+  },
+  "cached": false
+}

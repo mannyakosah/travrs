@@ -49,16 +49,21 @@ class InspectResult:
     reference_at_location: str | None = None
 
     def to_dict(self) -> dict:
+        provenance = []
+        if self.detection.note:
+            provenance.append(self.detection.note)
         return {
             "input": self.input,
             "detected_format": self.detection.fmt,
             "detection_note": self.detection.note,
+            "provenance": provenance,
             "id": self.vrs_id,
             "location_id": self.location_id,
             "allele": self.allele_json,
             "equivalents": self.equivalents,
             "checks": [c.__dict__ for c in self.checks],
             "reference_at_location": self.reference_at_location,
+            "trace": [],
             "errors": self.errors,
             "versions": self.versions,
         }

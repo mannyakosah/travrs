@@ -46,7 +46,24 @@ python -m travrs.cli --json "NC_000017.11:43124026:AG:"
 travrs "7-140753336-A-T"
 ```
 
-First run talks to public SeqRepo + UTA and can take 10–20 seconds. Each new CLI process pays that connect cost again.
+First run talks to public SeqRepo + UTA and can take 10–20 seconds. Each new CLI process pays that connect cost again. The HTTP API keeps the translator warm.
+
+## HTTP API
+
+```bash
+pip install -e ".[dev,web]"
+travrs-serve
+```
+
+Then:
+
+```bash
+curl -s http://127.0.0.1:8000/api/inspect \
+  -H 'Content-Type: application/json' \
+  -d '{"input":"NM_007294.4:c.68_69del"}' | python -m json.tool
+```
+
+`POST /api/inspect` accepts `{"input": "...", "format": "hgvs"|"spdi"|"gnomad"|"vrs"}`. The response shape is documented in `examples/inspect-response.json`. Interactive docs: http://127.0.0.1:8000/docs. CORS is open to the Vite ports (`5173`, `4173`). Successful results are cached on disk under `.cache/travrs`.
 
 ## Examples
 
@@ -91,5 +108,5 @@ Defaults are the public instances. Override either variable to point at a local 
 Format detection (no network):
 
 ```bash
-pytest tests/test_detect.py
+pytest tests/test_detect.py tests/test_api.py
 ```

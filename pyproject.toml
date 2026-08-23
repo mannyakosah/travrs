@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "httpx>=0.27"]
 web = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
@@ -27,6 +27,7 @@ web = [
 [project.scripts]
 travrs = "travrs.cli:main"
 vrs-explain = "travrs.cli:main"
+travrs-serve = "travrs.api:main"
 
 [tool.setuptools.packages.find]
 include = ["travrs*"]
