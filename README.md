@@ -4,7 +4,7 @@
 
 A developer-experience tool for the [GA4GH Variation Representation Specification](https://vrs.ga4gh.org) (VRS, pronounced *verse*). Paste HGVS, SPDI, gnomAD/VCF, or VRS JSON; get a normalized VRS Allele, a globally computed `ga4gh:VA.` identifier, and equivalent representations.
 
-This is **not** a reimplementation of VRS. Translation, normalization, and computed identifiers all go through the official reference library, [vrs-python](https://github.com/ga4gh/vrs-python). traVRS wraps that machinery so a newcomer can see it work in the first 15 minutes.
+This is **not** a reimplementation of VRS. Translation, normalization, and computed identifiers all go through the official reference library, [vrs-python](https://github.com/ga4gh/vrs-python).
 
 ```
 Input        NM_007294.4:c.68_69del          (BRCA1 185delAG)
@@ -16,97 +16,39 @@ Equivalents  SPDI / HGVS on the same sequence context
 
 No local sequence download. No local Postgres. Public SeqRepo REST + public UTA.
 
-## Install
+## Layout
 
-```bash
-git clone https://github.com/mannyakosah/travrs.git
-cd travrs
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+```
+backend/     Python package, CLI, HTTP API
+frontend/    Vite + React UI
 ```
 
-If `psycopg2` fails to build: `brew install libpq` (macOS), then retry.
-
-On some machines `python` is aliased to a system interpreter. Prefer `.venv/bin/python` if imports fail.
+Each side has its own install, lockfile, and README. They talk over HTTP
+(`POST /api/inspect`); nothing in `frontend/` imports Python, and nothing in
+`backend/` serves the UI.
 
 ## Quick start
 
-Smoke-test the official stack (one HGVS string → VRS Allele + computed ID):
+**Backend** — Python 3.12:
 
 ```bash
-python hello_vrs.py
-```
-
-Then explain any supported expression:
-
-```bash
-python -m travrs.cli "NM_007294.4:c.68_69del"
-python -m travrs.cli --json "NC_000017.11:43124026:AG:"
-travrs "7-140753336-A-T"
-```
-
-First run talks to public SeqRepo + UTA and can take 10–20 seconds. Each new CLI process pays that connect cost again. The HTTP API keeps the translator warm.
-
-## HTTP API
-
-```bash
+cd backend
+python3.12 -m venv .venv
+source .venv/bin/activate
 pip install -e ".[dev,web]"
 travrs-serve
 ```
 
-Then:
+**Frontend** — Node 24 LTS (do not change your nvm default if you still need Node 14 for seqr):
 
 ```bash
-curl -s http://127.0.0.1:8000/api/inspect \
-  -H 'Content-Type: application/json' \
-  -d '{"input":"NM_007294.4:c.68_69del"}' | python -m json.tool
+cd frontend
+nvm use
+npm install
+npm run dev
 ```
 
-`POST /api/inspect` accepts `{"input": "...", "format": "hgvs"|"spdi"|"gnomad"|"vrs"}`. The response shape is documented in `examples/inspect-response.json`. Interactive docs: http://127.0.0.1:8000/docs. CORS is open to the Vite ports (`5173`, `4173`). Successful results are cached on disk under `.cache/travrs`.
+UI: http://localhost:5173 · API: http://127.0.0.1:8000/docs
 
-## Examples
-
-**Same context → same ID.** These two are both on transcript `NM_007294.4` and produce
-`ga4gh:VA.0YDkCqUrzpmAs-rAFWpoQ0Y6gNwbIWPD`:
-
-```bash
-python -m travrs.cli "NM_007294.4:c.68_69del"     # HGVS coding
-python -m travrs.cli "NM_007294.4:178:4:AG"       # SPDI of the same allele
-```
-
-**Different context → different ID.** The same BRCA1 founder mutation *on GRCh38 chr17*
-is a different VRS object (`ga4gh:VA.NTCeCp4z3OjbRZnp6I1mONPrRn7i-ugU`). That is
-deliberate — VRS is context-precise:
-
-```bash
-python -m travrs.cli "NC_000017.11:g.43124027_43124028del"
-python -m travrs.cli "NC_000017.11:43124024:4:AC"
-```
-
-A substitution (BRAF V600E genomic). HGVS and gnomAD agree on
-`ga4gh:VA.Otc5ovrw906Ack087o1fhegB4jDRqCAe`:
-
-```bash
-python -m travrs.cli "NC_000007.14:g.140753336A>T"
-python -m travrs.cli "7-140753336-A-T"
-```
-
-## Data services
-
-Everything below is free and needs no account.
-
-| Service | Role | Environment variable |
-|---|---|---|
-| [SeqRepo REST](https://services.genomicmedlab.org/seqrepo) | reference bases + accession → `ga4gh:SQ.` digest | `GA4GH_VRS_DATAPROXY_URI` |
-| [UTA](https://github.com/biocommons/uta) | transcript ↔ genome projection for `c.` / `p.` HGVS | `UTA_DB_URL` |
-
-Defaults are the public instances. Override either variable to point at a local SeqRepo or UTA.
-
-## Tests
-
-Format detection (no network):
-
-```bash
-pytest tests/test_detect.py tests/test_api.py
-```
+See [backend/README.md](backend/README.md) for the CLI, example variants, and tests.
+See [frontend/README.md](frontend/README.md) for the design system and build commands.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Smoke-test: one HGVS string through official vrs-python + public data services.
 
-    source .venv/bin/activate
+    cd backend && source .venv/bin/activate
     python hello_vrs.py
 """
 

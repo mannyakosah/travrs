@@ -10,5 +10,8 @@ dist/
 build/
 .env
 .DS_Store
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
 vrs-interview-prep/
 traverse-docs/
