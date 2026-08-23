@@ -16,7 +16,7 @@ export type Check = {
 };
 
 export type TraceRef = {
-  kind: "spec" | "code" | "paper" | string;
+  kind: "spec" | "code" | string;
   label: string;
   url: string;
 };
@@ -41,6 +41,7 @@ export type TraceEvent = {
   after: Record<string, unknown> | null;
   ruler: TraceRuler | null;
   refs: TraceRef[];
+  glossary: string | null;
   data: Record<string, string> | null;
 };
 

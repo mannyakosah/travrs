@@ -185,9 +185,17 @@ export default function App() {
       )}
 
       <footer className="footer">
-        {result?.versions
-          ? `vrs-python ${result.versions.vrs_python ?? "?"}  ·  traVRS ${result.versions.travrs ?? "?"}`
-          : "vrs-python via POST /api/inspect"}
+        <div>
+          {result?.versions
+            ? `vrs-python ${result.versions.vrs_python ?? "?"}  ·  traVRS ${result.versions.travrs ?? "?"}`
+            : "vrs-python via POST /api/inspect"}
+        </div>
+        <div>
+          Concepts from{" "}
+          <a href="https://doi.org/10.1016/j.xgen.2021.100027">
+            Wagner et al. 2021, Cell Genomics
+          </a>
+        </div>
       </footer>
     </div>
   );

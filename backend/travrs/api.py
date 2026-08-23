@@ -74,8 +74,8 @@ class InspectRequest(BaseModel):
 
 
 def _inspect_payload(raw: str, fmt: Fmt | None, cache) -> dict[str, Any]:
-    # v2: payload now includes the trace; old cached entries must not be served
-    key = f"v2::{fmt or 'auto'}::{raw.strip()}"
+    # v3: paper links dropped from per-step refs
+    key = f"v3::{fmt or 'auto'}::{raw.strip()}"
     use_cache = os.environ.get("TRAVRS_NO_CACHE") != "1"
     if use_cache:
         cached = cache.get(key)

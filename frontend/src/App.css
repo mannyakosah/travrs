@@ -269,4 +269,17 @@
   color: var(--muted);
   font-family: var(--mono);
   font-size: 12px;
+  display: grid;
+  gap: var(--s-2);
+}
+
+.footer a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--line);
+}
+
+.footer a:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }

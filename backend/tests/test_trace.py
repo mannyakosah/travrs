@@ -74,6 +74,14 @@ def test_roll_frames_recorded_for_repeat_deletion():
     assert all(e["ruler"] is not None for e in rolls if "skip" not in e["id"])
 
 
+def test_events_have_spec_code_not_paper():
+    _, _, events = derive(7, 9, "")
+    kinds = {ref["kind"] for e in events for ref in e["refs"]}
+    assert "paper" not in kinds
+    assert "spec" in kinds
+    assert all(e.get("glossary") for e in events)
+
+
 def test_digest_trace_matches_identify():
     dp = FakeDataProxy()
     allele = normalize(make_allele(7, 9, ""), dp)

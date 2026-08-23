@@ -37,34 +37,46 @@ function StatePairs({ obj }: { obj: Record<string, unknown> }) {
   );
 }
 
+function tickLabel(pos: number, start: number, end: number): string | null {
+  const gap = end - start;
+  if (pos === start) return String(start);
+  if (pos === end) return gap >= 6 ? String(end) : `+${gap}`;
+  return null;
+}
+
 function Ruler({ ruler }: { ruler: TraceRuler }) {
   const cells = ruler.window.split("");
-  const boundary = (pos: number) => pos === ruler.start || pos === ruler.end;
+  const endTickAfter = ruler.window_start + cells.length === ruler.end;
   return (
-    <div className="ruler" aria-label="sequence ruler">
+    <div className="ruler" aria-label={`interval [${ruler.start}, ${ruler.end})`}>
       <div className="ruler-row">
         {cells.map((base, i) => {
           const pos = ruler.window_start + i;
           const inIval = pos >= ruler.start && pos < ruler.end;
+          const isTick = pos === ruler.start || pos === ruler.end;
+          const label = isTick ? tickLabel(pos, ruler.start, ruler.end) : null;
           return (
             <span
               key={i}
               className={
                 "ruler-cell" +
                 (inIval ? " in" : "") +
-                (boundary(pos) ? " tick" : "")
+                (isTick ? " tick" : "")
               }
             >
-              {boundary(pos) && <span className="tick-label">{pos}</span>}
+              {label && <span className="tick-label">{label}</span>}
               {base}
             </span>
           );
         })}
-        {ruler.window_start + cells.length === ruler.end && (
+        {endTickAfter && (
           <span className="ruler-cell tick phantom">
-            <span className="tick-label">{ruler.end}</span>
+            <span className="tick-label">{tickLabel(ruler.end, ruler.start, ruler.end)}</span>
           </span>
         )}
+      </div>
+      <div className="ruler-caption">
+        [{ruler.start}, {ruler.end})
       </div>
     </div>
   );
@@ -134,13 +146,18 @@ function Frame({ event, mode }: { event: TraceEvent; mode: Mode }) {
         </div>
       )}
       {mode === "spec" && event.data && <DigestData data={event.data} />}
-      {event.refs.length > 0 && (
+      {(event.refs.length > 0 || event.glossary) && (
         <div className="frame-refs">
-          {event.refs.map((ref) => (
-            <a key={ref.url + ref.label} href={ref.url} target="_blank" rel="noreferrer">
-              {ref.kind}: {ref.label}
-            </a>
-          ))}
+          {event.refs
+            .filter((ref) => ref.kind !== "paper")
+            .map((ref) => (
+              <a key={ref.url + ref.label} href={ref.url} target="_blank" rel="noreferrer">
+                {ref.kind}: {ref.label}
+              </a>
+            ))}
+          {event.glossary && (
+            <a href={`/glossary#${event.glossary}`}>glossary: {event.glossary}</a>
+          )}
         </div>
       )}
     </div>
@@ -241,12 +258,13 @@ export default function Trace({
   const byGroup = useMemo(() => {
     const map = new Map<TraceGroup, TraceEvent[]>();
     for (const event of events) {
+      if (event.step === "verify" && verified !== false) continue;
       const list = map.get(event.group) ?? [];
       list.push(event);
       map.set(event.group, list);
     }
     return map;
-  }, [events]);
+  }, [events, verified]);
 
   const checkOk = (name?: string) => {
     if (!name) return true;
@@ -259,9 +277,10 @@ export default function Trace({
       <div className="trace-head">
         <p className="section-label">Trace</p>
         <div className="trace-controls">
-          {verified === true && <span className="verified ok">✓ re-derivation matches ga4gh.vrs</span>}
           {verified === false && (
-            <span className="verified bad">re-derivation mismatch — library result shown</span>
+            <span className="verified bad">
+              This step view disagrees with vrs-python. The identifier above is the library’s.
+            </span>
           )}
           <div className="mode-switch" role="group" aria-label="trace detail level">
             {(["learn", "spec"] as Mode[]).map((m) => (

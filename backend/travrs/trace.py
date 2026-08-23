@@ -12,7 +12,8 @@ Event shape (consumed by the frontend trace panel):
       "iteration": 2, "title": "...", "note": "...",
       "before": {...}, "after": {...},
       "ruler": {"window": "...", "window_start": int, "start": int, "end": int},
-      "refs": [{"kind": "spec"|"code"|"paper", "label": "...", "url": "..."}],
+      "refs": [{"kind": "spec"|"code", "label": "...", "url": "..."}],
+      "glossary": "inter-residue",
       "data": {...}   # level-3 extras (bytes, hex digests)
     }
 """
@@ -37,7 +38,13 @@ _RULER_PAD = 12
 _SPEC_NORM = "https://vrs.ga4gh.org/en/stable/conventions/normalization.html#allele-normalization"
 _SPEC_CI = "https://vrs.ga4gh.org/en/stable/conventions/computed_identifiers.html"
 _SPEC_DATA = "https://vrs.ga4gh.org/en/stable/conventions/required_data.html"
-_PAPER = "https://doi.org/10.1016/j.xgen.2021.100027"
+
+_GLOSSARY_FOR_GROUP = {
+    "resolve": "seqrepo-uta",
+    "coordinates": "inter-residue",
+    "normalize": "normalization",
+    "digest": "digest",
+}
 
 
 def _vrs_python_version() -> str:
@@ -58,12 +65,13 @@ def _refs(*pairs: tuple[str, str, str]) -> list[dict]:
 _REFS_NORM = _refs(
     ("spec", "normalization", _SPEC_NORM),
     ("code", "vrs/normalize.py", _code_url("vrs/normalize.py")),
-    ("paper", "Wagner 2021 (STAR Methods)", _PAPER),
 )
 _REFS_DIGEST = _refs(
     ("spec", "computed identifiers", _SPEC_CI),
     ("code", "core/identifiers.py", _code_url("core/identifiers.py")),
-    ("paper", "Wagner 2021 (STAR Methods)", _PAPER),
+)
+_REFS_COORD = _refs(
+    ("spec", "normalization", _SPEC_NORM),
 )
 _REFS_SEQ = _refs(
     ("spec", "required external data", _SPEC_DATA),
@@ -84,6 +92,7 @@ def _ev(
     refs: list[dict] | None = None,
     iteration: int | None = None,
     data: dict | None = None,
+    glossary: str | None = None,
 ) -> dict:
     return {
         "id": id,
@@ -96,6 +105,7 @@ def _ev(
         "after": after,
         "ruler": ruler,
         "refs": refs or [],
+        "glossary": glossary if glossary is not None else _GLOSSARY_FOR_GROUP.get(group),
         "data": data,
     }
 
@@ -220,6 +230,7 @@ def _intro_events(raw_allele: Any, detection: Detection, win: _RefWindow) -> lis
             before={"accession": input_label},
             after={"refgetAccession": acc},
             refs=_REFS_SEQ,
+            glossary="accession",
         )
     ]
     if detection.fmt == "hgvs" and (parsed.get("kind") in {"c", "n", "r"}):
@@ -234,6 +245,7 @@ def _intro_events(raw_allele: Any, detection: Detection, win: _RefWindow) -> lis
                     "hgvs package + UTA map them onto the sequence before VRS sees them."
                 ),
                 refs=_REFS_SEQ,
+                glossary="transcript",
             )
         )
 
@@ -257,7 +269,7 @@ def _intro_events(raw_allele: Any, detection: Detection, win: _RefWindow) -> lis
                 note=note,
                 after={"start": start, "end": end},
                 ruler=_ruler(win, start, end),
-                refs=_refs(("spec", "normalization", _SPEC_NORM), ("paper", "Wagner 2021 §inter-residue", _PAPER)),
+                refs=_REFS_COORD,
             )
         )
     return events
