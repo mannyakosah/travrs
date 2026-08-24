@@ -95,7 +95,7 @@ export function MiniGene() {
   const [spot, setSpot] = useState<"exon" | "intron" | null>(null);
   return (
     <div className="w">
-      <div className="gene" aria-label="toy transcript with one intron">
+      <div className="gene" aria-label="example transcript with one intron">
         <button
           type="button"
           className={"exon" + (spot === "exon" ? " on" : "")}
@@ -359,10 +359,7 @@ export function ContextStack() {
           </button>
         ))}
       </div>
-      <Hint>
-        {row.note}
-        {"toy" in row && row.toy ? <span className="warn-tag">toy id</span> : null}
-      </Hint>
+      <Hint>{row.note}</Hint>
     </div>
   );
 }
@@ -470,7 +467,7 @@ export function ValueObject() {
           <>
             <code>start</code> changed, so the object is different. The ID is
             derived, not assigned.
-            <span className="warn-tag">toy id</span>
+            <span className="warn-tag">placeholder</span>
           </>
         )}
       </Hint>

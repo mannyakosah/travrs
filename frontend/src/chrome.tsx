@@ -23,8 +23,10 @@ export function Wordmark({ href = "/" }: { href?: string }) {
 export function SiteHeader({ children }: { children?: ReactNode }) {
   return (
     <header>
-      <Wordmark href="/" />
-      <p className="subline">pronounced traverse</p>
+      <div className="brand">
+        <Wordmark href="/" />
+        <span className="subline">pronounced traverse</span>
+      </div>
       <p className="blurb">{SITE_BLURB}</p>
       {children}
     </header>
@@ -69,7 +71,11 @@ export function SiteFooter({
           <a href="/">Inspect</a>
         )}
         {" · "}
-        <a href="https://doi.org/10.1016/j.xgen.2021.100027">
+        <a
+          href="https://doi.org/10.1016/j.xgen.2021.100027"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Wagner et al. 2021, Cell Genomics
         </a>
       </div>

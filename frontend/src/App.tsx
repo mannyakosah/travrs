@@ -122,13 +122,11 @@ export default function App() {
 
   return (
     <div className="page">
-      <SiteHeader>
-        <p className="lede">Accepts HGVS, SPDI, gnomAD/VCF, or VRS JSON.</p>
-      </SiteHeader>
+      <SiteHeader />
 
       <form className="field" onSubmit={onSubmit}>
-        <label className="field-label" htmlFor="variant">
-          Variant
+        <label className="field-hint" htmlFor="variant">
+          Accepts HGVS, SPDI, gnomAD/VCF, or VRS JSON.
         </label>
         <div className="field-row">
           <div className="field-input-wrap">

@@ -110,7 +110,7 @@ trace, Story, and the glossary can reuse them.
 
 Real route `/glossary`. Page title is the word Glossary. Footer word only,
 no marketing nav. Shared one-line blurb on both pages. Entries: official
-term, then an everyday phrase, then a first-principles paragraph and one toy.
+term, then an everyday phrase, then a first-principles paragraph and one figure.
 Trace jargon is `#` links into this page. One inspect link at the top
 (`/?q=`), not per entry.
 

@@ -188,7 +188,7 @@ export default function Glossary() {
           then how VRS uses it.
         </p>
         <p className="g-example">
-          Toys use BRCA1 185delAG,{" "}
+          Figures use BRCA1 185delAG,{" "}
           <code>{TOY_BRCA1_C}</code>
           .{" "}
           <a href={inspectHref(TOY_BRCA1_C)}>Inspect that variant</a>

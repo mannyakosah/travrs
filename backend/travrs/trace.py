@@ -295,7 +295,7 @@ def _intro_events(raw_allele: Any, detection: Detection, win: _RefWindow) -> lis
         note = (
             f"The pasted string numbered residues (the letters). VRS numbers the cuts "
             f"between letters, written [{start}, {end}). One interval meaning for "
-            "substitution, deletion, and insertion — which is why this is not merely '0-based'."
+            "substitution, deletion, and insertion, which is why this is not merely '0-based'."
         )
         if detection.fmt == "spdi":
             note = (

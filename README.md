@@ -1,5 +1,7 @@
 # traVRS
 
+**Live: [trytravrs.web.app](https://trytravrs.web.app)**
+
 **traVRS** (pronounced *traverse*) — trace any variant through the verse.
 
 A developer-experience tool for the [GA4GH Variation Representation Specification](https://vrs.ga4gh.org) (VRS, pronounced *verse*). Paste HGVS, SPDI, gnomAD/VCF, or VRS JSON; get a normalized VRS Allele, a globally computed `ga4gh:VA.` identifier, and equivalent representations.
@@ -38,7 +40,7 @@ pip install -e ".[dev,web]"
 travrs-serve
 ```
 
-**Frontend** — Node 24 LTS (do not change your nvm default if you still need Node 14 for seqr):
+**Frontend** — Node 24 LTS:
 
 ```bash
 cd frontend
@@ -52,12 +54,7 @@ UI: http://localhost:5173 · API: http://127.0.0.1:8000/docs
 See [backend/README.md](backend/README.md) for the CLI, example variants, and tests.
 See [frontend/README.md](frontend/README.md) for the design system and build commands.
 
-## Live
-
-[trytravrs.web.app](https://trytravrs.web.app) — Firebase Hosting for the UI,
-Cloud Run for `/api`.
-
-To run the same image locally:
+**Image** — UI and API in one container:
 
 ```bash
 docker build -t travrs .

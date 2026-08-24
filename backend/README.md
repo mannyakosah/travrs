@@ -15,11 +15,6 @@ source .venv/bin/activate
 pip install -e ".[dev,web]"
 ```
 
-If `psycopg2` fails to build: `brew install libpq` (macOS), then retry.
-
-On some machines `python` is aliased to a system interpreter. Prefer
-`.venv/bin/python` if imports fail.
-
 ## CLI
 
 ```bash

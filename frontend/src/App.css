@@ -18,22 +18,30 @@
   color: var(--accent);
 }
 
+.brand {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--s-3);
+  row-gap: 0;
+}
+
 .subline {
-  margin: var(--s-1) 0 0;
+  margin: 0;
   color: var(--muted);
   font-size: 14px;
 }
 
 .blurb {
-  margin: var(--s-3) 0 0;
-  max-width: 40em;
+  margin: var(--s-4) 0 0;
+  max-width: 36em;
   color: var(--text);
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 16px;
+  line-height: 1.55;
 }
 
 .lede {
-  margin: var(--s-3) 0 0;
+  margin: var(--s-5) 0 0;
   color: var(--muted);
   max-width: 40em;
 }
@@ -46,7 +54,7 @@
 }
 
 .field {
-  margin-top: var(--s-6);
+  margin-top: var(--s-7);
   position: relative;
 }
 
@@ -58,6 +66,13 @@
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.field-hint {
+  display: block;
+  margin: 0 0 var(--s-2);
+  color: var(--muted);
+  font-size: 14px;
 }
 
 .field-row {
