@@ -24,8 +24,7 @@ frontend/    Vite + React UI
 ```
 
 Each side has its own install, lockfile, and README. Locally they talk over
-HTTP (`POST /api/inspect`). The production `Dockerfile` builds both and the
-API serves the UI, so Cloud Run is one container.
+HTTP (`POST /api/inspect`).
 
 ## Quick start
 
@@ -53,43 +52,14 @@ UI: http://localhost:5173 · API: http://127.0.0.1:8000/docs
 See [backend/README.md](backend/README.md) for the CLI, example variants, and tests.
 See [frontend/README.md](frontend/README.md) for the design system and build commands.
 
-## Docker
+## Live
 
-One image: built UI plus the FastAPI / vrs-python process. Cloud Run sets `PORT`.
+[trytravrs.web.app](https://trytravrs.web.app) — Firebase Hosting for the UI,
+Cloud Run for `/api`.
+
+To run the same image locally:
 
 ```bash
 docker build -t travrs .
 docker run --rm -p 8080:8080 travrs
 ```
-
-http://127.0.0.1:8080 · `/health` · `/glossary` · `/api/inspect`
-
-Cache writes to `/tmp/travrs-cache` (ephemeral on Cloud Run unless you mount a volume).
-Public SeqRepo + UTA are the defaults. Extra browser origins (if the UI is not
-same-origin): `TRAVRS_CORS_ORIGINS=https://your-app.web.app`.
-
-## Deploy (Cloud Run + Firebase Hosting)
-
-Create a **new Firebase project** in the [Firebase console](https://console.firebase.google.com/).
-That *is* a Google Cloud project; Hosting and `PROJECT_ID.web.app` come with it.
-Do not start in Cloud Console unless you then “Add Firebase” to that same project.
-
-Prefer a dedicated project (not an existing app). After it exists:
-
-```bash
-gcloud auth login
-npx -y firebase-tools@latest login
-export GOOGLE_CLOUD_PROJECT=trytravrs
-./scripts/deploy.sh
-```
-
-The script builds the image on Cloud Build, deploys Cloud Run service `travrs`
-in `us-central1`, builds the Vite UI, and deploys Hosting. `firebase.json`
-sends `/api/**` to Cloud Run and everything else to the SPA.
-
-Probe Cloud Run at `/health`. First inspect after a cold start can be slow;
-set `--min-instances=1` on the `gcloud run deploy` line for interview week.
-
-GitHub Actions (`.github/workflows/ci.yml`) runs tests on every PR and push
-to `main`. Production deploy from Actions is a follow-up once the project id
-and deploy credentials exist.

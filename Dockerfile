@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1
-# Production image: Vite UI + FastAPI / vrs-python.
-# Cloud Run sets PORT. Local: docker build -t travrs . && docker run --rm -p 8080:8080 travrs
+# Vite UI + FastAPI / vrs-python. Listens on PORT (8080 by default).
 
 FROM node:24-bookworm-slim AS ui
 WORKDIR /ui

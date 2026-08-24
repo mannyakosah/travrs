@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
-# First-time: create the Firebase project in the Firebase console (that is also
-# the Google Cloud project), then:
-#   gcloud auth login
-#   npx -y firebase-tools@latest login
-#   export GOOGLE_CLOUD_PROJECT=your-project-id
-#   ./scripts/deploy.sh
+# Deploy this project to trytravrs (Firebase Hosting + Cloud Run).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

@@ -47,12 +47,8 @@ curl -s http://127.0.0.1:8000/api/inspect \
 
 `POST /api/inspect` accepts `{"input": "...", "format": "hgvs"|"spdi"|"gnomad"|"vrs"}`.
 The response shape is in `examples/inspect-response.json`. Interactive docs:
-http://127.0.0.1:8000/docs. CORS is open to the Vite ports (`5173`, `4173`);
-add production origins with `TRAVRS_CORS_ORIGINS`. Successful results are
-cached under `.cache/travrs` (or `TRAVRS_CACHE_DIR`).
-
-When `TRAVRS_STATIC_DIR` points at a Vite `dist` (the Docker image does this),
-`/` and `/glossary` serve the UI and `/api/*` stays the API.
+http://127.0.0.1:8000/docs. CORS is open to the Vite ports (`5173`, `4173`).
+Successful results are cached under `.cache/travrs`.
 
 ## Examples
 
