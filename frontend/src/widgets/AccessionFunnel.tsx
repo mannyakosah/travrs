@@ -24,15 +24,15 @@ export function AccessionFunnel({
     hover === null ? (
       <>
         {rows.length > 1
-          ? `${rows.length} catalog names, one molecule`
-          : "One catalog name"}
+          ? `${rows.length} accessions, one molecule`
+          : "One accession"}
         {length ? ` of ${length.toLocaleString()} bases` : ""}. Every name on the
         left resolves to the single digest on the right.
       </>
     ) : (
       <>
-        <code>{rows[hover].value}</code> is a label in the{" "}
-        <code>{rows[hover].namespace}</code> catalog. Labels never enter the
+        <code>{rows[hover].value}</code> is an accession in the{" "}
+        <code>{rows[hover].namespace}</code> catalog. Accessions never enter the
         hash, so another name for the same molecule still gives this ID.
       </>
     );

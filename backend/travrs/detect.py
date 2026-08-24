@@ -131,7 +131,8 @@ def detect(raw: str) -> Detection:
         "Could not detect a variant representation.\n"
         "Supported today: HGVS, SPDI, gnomAD/VCF (chrom-pos-ref-alt), VRS JSON.\n"
         "Detected later: ClinVar / rsID / ClinGen CA, VRS IDs.\n"
-        f"Examples:  NM_007294.4:c.68_69del\n"
-        f"           NC_000017.11:43124026:AG:\n"
-        f"           17-43124027-CAG-C"
+        "Examples:\n"
+        "  HGVS    NM_007294.4:c.68_69del\n"
+        "  SPDI    NC_000017.11:43124026:AG:\n"
+        "  gnomAD  17-43124027-CAG-C"
     )

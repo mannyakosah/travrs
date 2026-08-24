@@ -24,6 +24,16 @@ export function cacheBypassRequested(): boolean {
   return new URLSearchParams(window.location.search).has("nocache");
 }
 
+export async function fetchVersions(): Promise<Record<string, string> | null> {
+  try {
+    const response = await fetch("/api/versions");
+    if (!response.ok) return null;
+    return (await response.json()) as Record<string, string>;
+  } catch {
+    return null;
+  }
+}
+
 export async function inspectVariant(
   input: string,
   onProgress?: (event: InspectProgress) => void,

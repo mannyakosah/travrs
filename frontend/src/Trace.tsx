@@ -12,7 +12,7 @@ import {
   SerializeDiff,
   StateChip,
   TrimTapes,
-} from "./widgets";
+} from "./widgets/index";
 import "./Trace.css";
 
 export const JOURNEY: { key: JourneyStage; label: string; subtitle: string }[] = [
@@ -47,7 +47,7 @@ export function JourneyBar({
 }) {
   return (
     <div className="pipeline" aria-live="polite">
-      {JOURNEY.map((node, i) => {
+      {JOURNEY.map((node) => {
         const isFailed = failed?.has(node.key);
         const isDone = completed.has(node.key);
         const isCurrent = current === node.key && !isDone;
@@ -62,29 +62,25 @@ export function JourneyBar({
             <span className="pipeline-sub">{node.subtitle}</span>
           </>
         );
-        return (
-          <span key={node.key} className="pipeline-node-wrap">
-            {i > 0 && <span className="pipeline-link" aria-hidden />}
-            {onSelect ? (
-              <button
-                type="button"
-                className={cls}
-                onClick={() => onSelect(node.key)}
-                aria-current={isSelected || isCurrent ? "step" : undefined}
-              >
-                {inner}
-              </button>
-            ) : (
-              <span className={cls}>{inner}</span>
-            )}
+        return onSelect ? (
+          <button
+            key={node.key}
+            type="button"
+            className={cls}
+            onClick={() => onSelect(node.key)}
+            aria-current={isSelected || isCurrent ? "step" : undefined}
+          >
+            {inner}
+          </button>
+        ) : (
+          <span key={node.key} className={cls}>
+            {inner}
           </span>
         );
       })}
     </div>
   );
 }
-
-type Mode = "learn" | "spec";
 
 function fmtValue(value: unknown): string {
   if (value === null || value === undefined) return "∅";
@@ -164,14 +160,29 @@ function stepWidget(
 
 function Frame({
   event,
-  mode,
   onJump,
 }: {
   event: TraceEvent;
-  mode: Mode;
   onJump: (eventId: string) => void;
 }) {
   const widget = stepWidget(event, onJump);
+  const states =
+    event.before || event.after ? (
+      <div className="frame-states">
+        {event.before && (
+          <div>
+            <span className="state-label">before</span>
+            <StatePairs obj={event.before} />
+          </div>
+        )}
+        {event.after && (
+          <div>
+            <span className="state-label">after</span>
+            <StatePairs obj={event.after} />
+          </div>
+        )}
+      </div>
+    ) : null;
   return (
     <div className="frame">
       <div className="frame-title">
@@ -180,22 +191,15 @@ function Frame({
       </div>
       {event.note && <p className="frame-note">{event.note}</p>}
       {widget ?? (event.ruler && <IntervalRuler ruler={event.ruler} />)}
-      {(mode === "spec" || !widget) && (event.before || event.after) && (
-        <div className="frame-states">
-          {event.before && (
-            <div>
-              <span className="state-label">before</span>
-              <StatePairs obj={event.before} />
-            </div>
-          )}
-          {event.after && (
-            <div>
-              <span className="state-label">after</span>
-              <StatePairs obj={event.after} />
-            </div>
-          )}
-        </div>
-      )}
+      {states &&
+        (widget ? (
+          <details className="frame-fields">
+            <summary>fields</summary>
+            {states}
+          </details>
+        ) : (
+          states
+        ))}
       {(event.refs.length > 0 || event.glossary) && (
         <div className="frame-refs">
           {event.refs
@@ -218,28 +222,20 @@ function ThinCard({
   id,
   title,
   summary,
-  defaultOpen,
-  focusKey,
-  focusAt,
+  open,
+  onToggle,
   children,
 }: {
   id: string;
   title: string;
   summary: string;
-  defaultOpen: boolean;
-  focusKey: string | null;
-  focusAt: number;
+  open: boolean;
+  onToggle: () => void;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
-  useEffect(() => setOpen(defaultOpen), [defaultOpen]);
-  useEffect(() => {
-    if (focusKey === id) setOpen(true);
-  }, [focusKey, focusAt, id]);
-
   return (
     <div id={`journey-${id}`} className={"group-card thin" + (open ? " open" : "")}>
-      <button type="button" className="group-head" onClick={() => setOpen(!open)}>
+      <button type="button" className="group-head" onClick={onToggle}>
         <span className="group-title">{title}</span>
         <span className="group-summary">{summary}</span>
         <span className="group-toggle">{open ? "−" : "+"}</span>
@@ -254,28 +250,19 @@ function GroupCard({
   letter,
   title,
   events,
-  mode,
-  defaultOpen,
-  focusKey,
-  focusAt,
+  open,
+  onToggle,
 }: {
   cardKey: string;
   letter: string;
   title: string;
   events: TraceEvent[];
-  mode: Mode;
-  defaultOpen: boolean;
-  focusKey: string | null;
-  focusAt: number;
+  open: boolean;
+  onToggle: () => void;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   useEffect(() => setIdx(0), [events]);
-  useEffect(() => setOpen(defaultOpen), [defaultOpen]);
-  useEffect(() => {
-    if (focusKey === cardKey) setOpen(true);
-  }, [focusKey, focusAt, cardKey]);
 
   useEffect(() => {
     if (!playing) return;
@@ -332,7 +319,7 @@ function GroupCard({
 
   return (
     <div id={`journey-${cardKey}`} className={"group-card" + (open ? " open" : "")}>
-      <button type="button" className="group-head" onClick={() => setOpen(!open)}>
+      <button type="button" className="group-head" onClick={onToggle}>
         <span className="group-letter">{letter}</span>
         <span className="group-title">{title}</span>
         <span className="group-summary">{summary}</span>
@@ -340,7 +327,7 @@ function GroupCard({
       </button>
       {open && (
         <div className="group-body" tabIndex={0} onKeyDown={onKey}>
-          <Frame event={current} mode={mode} onJump={jump} />
+          <Frame event={current} onJump={jump} />
           {events.length > 1 && (
             <div className="stepper">
               <button type="button" onClick={() => step(-1)} disabled={idx === 0}>
@@ -403,12 +390,8 @@ export default function Trace({
   reference: string | null;
   equivalents: Record<string, string[]>;
 }) {
-  const [mode, setMode] = useState<Mode>(
-    () => (localStorage.getItem("travrs-trace-mode") as Mode) || "learn",
-  );
   const [focusKey, setFocusKey] = useState<string | null>(null);
-  const [focusAt, setFocusAt] = useState(0);
-  useEffect(() => localStorage.setItem("travrs-trace-mode", mode), [mode]);
+  const [openKeys, setOpenKeys] = useState<Set<string>>(() => new Set(["normalize"]));
 
   const byGroup = useMemo(() => {
     const map = new Map<TraceGroup, TraceEvent[]>();
@@ -446,15 +429,43 @@ export default function Trace({
     return done;
   }, [failed]);
 
+  useEffect(() => {
+    const next = new Set<string>(["normalize"]);
+    if (
+      checks.some(
+        (c) =>
+          (c.name === "reference_fetch" || c.name === "asserted_reference") && !c.ok,
+      )
+    ) {
+      next.add("verify");
+    }
+    setOpenKeys(next);
+  }, [events, checks]);
+
+  function setOpen(key: string, open: boolean) {
+    setOpenKeys((prev) => {
+      const next = new Set(prev);
+      if (open) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
+
   function selectStage(key: JourneyStage) {
     setFocusKey(key);
-    setFocusAt(Date.now());
+    setOpen(key, true);
     window.requestAnimationFrame(() => {
       document.getElementById(`journey-${key}`)?.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
     });
+  }
+
+  const allOpen = JOURNEY.every((node) => openKeys.has(node.key));
+
+  function toggleFold() {
+    setOpenKeys(allOpen ? new Set() : new Set(JOURNEY.map((node) => node.key)));
   }
 
   const verifyChecks = checks.filter(
@@ -473,18 +484,9 @@ export default function Trace({
               This step view disagrees with vrs-python. The identifier above is the library’s.
             </span>
           )}
-          <div className="mode-switch" role="group" aria-label="trace detail level">
-            {(["learn", "spec"] as Mode[]).map((m) => (
-              <button
-                key={m}
-                type="button"
-                className={mode === m ? "active" : ""}
-                onClick={() => setMode(m)}
-              >
-                {m}
-              </button>
-            ))}
-          </div>
+          <button type="button" className="fold" onClick={toggleFold}>
+            {allOpen ? "Collapse all" : "Expand all"}
+          </button>
         </div>
       </div>
 
@@ -503,9 +505,8 @@ export default function Trace({
               id={node.key}
               title="Detect"
               summary={formatLabel(detectedFormat)}
-              defaultOpen={mode === "spec"}
-              focusKey={focusKey}
-              focusAt={focusAt}
+              open={openKeys.has(node.key)}
+              onToggle={() => setOpen(node.key, !openKeys.has(node.key))}
             >
               <p className="thin-line">
                 <span className="pair-key">{formatLabel(detectedFormat)}</span>{" "}
@@ -521,9 +522,8 @@ export default function Trace({
               id={node.key}
               title="Verify"
               summary={reference != null ? `'${reference}'` : "no bases"}
-              defaultOpen={mode === "spec" || failed.has("verify")}
-              focusKey={focusKey}
-              focusAt={focusAt}
+              open={openKeys.has(node.key)}
+              onToggle={() => setOpen(node.key, !openKeys.has(node.key))}
             >
               {reference != null && (
                 <p className="thin-line">
@@ -545,9 +545,8 @@ export default function Trace({
               id={node.key}
               title="Equivalents"
               summary={firstEquivalent}
-              defaultOpen={mode === "spec"}
-              focusKey={focusKey}
-              focusAt={focusAt}
+              open={openKeys.has(node.key)}
+              onToggle={() => setOpen(node.key, !openKeys.has(node.key))}
             >
               {Object.entries(equivalents).map(([fmt, values]) => (
                 <p key={fmt} className="thin-line">
@@ -570,10 +569,8 @@ export default function Trace({
             letter={alg.letter}
             title={alg.title}
             events={groupEvents}
-            mode={mode}
-            defaultOpen={mode === "spec" || alg.group === "normalize"}
-            focusKey={focusKey}
-            focusAt={focusAt}
+            open={openKeys.has(node.key)}
+            onToggle={() => setOpen(node.key, !openKeys.has(node.key))}
           />
         );
       })}

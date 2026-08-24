@@ -38,6 +38,12 @@ def test_health(client):
     assert client.get("/health").json() == {"status": "ok"}
 
 
+def test_versions(client):
+    body = client.get("/api/versions").json()
+    assert "vrs_python" in body
+    assert "travrs" in body
+
+
 def test_inspect_returns_id(client):
     response = client.post(
         "/api/inspect",

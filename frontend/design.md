@@ -84,7 +84,8 @@ replacement.
   page. Copy control is text, not an icon-only button.
 - **Checks** — a list, not a table. `✓` / `✗` in ok/bad. Name on the first
   line, detail wraps underneath.
-- **JSON** — collapsed `<details>` by default. Surface-2 well, no tree widget.
+- **JSON** — collapsed `<details>` under the identifier, before the trace.
+  Surface-2 well, no tree widget.
 - **Errors** — explanation first. Never a raw traceback.
 
 ## Components (trace widgets)
@@ -104,6 +105,14 @@ trace, Story, and the glossary can reuse them.
   `--muted` is “excluded from the hash”.
 - **Toggles** — mono, small, 1px line; selected gets accent-dim fill. A widget
   never has more than one.
+
+## Glossary
+
+Real route `/glossary`. Page title is the word Glossary. Footer word only,
+no marketing nav. Shared one-line blurb on both pages. Entries: official
+term, then an everyday phrase, then a first-principles paragraph and one toy.
+Trace jargon is `#` links into this page. One inspect link at the top
+(`/?q=`), not per entry.
 
 ## Do / don’t
 

@@ -87,7 +87,7 @@ class InspectResult:
         }
 
 
-def _versions() -> dict[str, str]:
+def package_versions() -> dict[str, str]:
     from importlib.metadata import PackageNotFoundError, version
 
     out = {}
@@ -296,7 +296,7 @@ def inspect(
     result = InspectResult(
         input=raw.strip(),
         detection=Detection("unknown", ""),
-        versions=_versions(),
+        versions=package_versions(),
     )
     _stage(on_stage, "detect")
     _emit(on_progress, "Detecting format…")

@@ -1,10 +1,30 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { inspectVariant, type JourneyStage } from "./api";
+import { SiteFooter, SiteHeader } from "./chrome";
 import { detectFormat, formatLabel } from "./detect";
 import { EXAMPLES } from "./examples";
 import Trace, { JourneyBar, JOURNEY } from "./Trace";
 import type { InspectResponse } from "./types";
 import "./App.css";
+
+function queryInput(): { value: string; autorun: boolean } {
+  const q = new URLSearchParams(window.location.search).get("q")?.trim();
+  return q
+    ? { value: q, autorun: true }
+    : { value: "NM_007294.4:c.68_69del", autorun: false };
+}
+
+const UNKNOWN_EXAMPLES = [
+  { label: "HGVS", value: "NM_007294.4:c.68_69del" },
+  { label: "SPDI", value: "NC_000017.11:43124026:AG:" },
+  { label: "gnomAD", value: "17-43124027-CAG-C" },
+] as const;
+
+function isUnknownFormat(result: InspectResponse): boolean {
+  return result.errors.some((row) =>
+    /could not detect a variant representation/i.test(row),
+  );
+}
 
 function explainFailure(result: InspectResponse): string {
   const joined = result.errors.join("\n");
@@ -18,12 +38,16 @@ function explainFailure(result: InspectResponse): string {
   if (/not implemented/i.test(joined) || /not implemented/i.test(result.detection_note)) {
     return "This identifier kind is recognized but not resolved yet. Paste HGVS, SPDI, gnomAD (chrom-pos-ref-alt), or VRS JSON.";
   }
+  if (isUnknownFormat(result)) {
+    return "Could not detect a variant representation. Supported today: HGVS, SPDI, gnomAD/VCF (chrom-pos-ref-alt), or VRS JSON.";
+  }
   if (joined) return joined;
   return "Could not translate this input to a VRS Allele.";
 }
 
 export default function App() {
-  const [input, setInput] = useState("NM_007294.4:c.68_69del");
+  const boot = useRef(queryInput());
+  const [input, setInput] = useState(boot.current.value);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<InspectResponse | null>(null);
@@ -33,6 +57,13 @@ export default function App() {
   const [status, setStatus] = useState<string | null>(null);
 
   const liveFormat = useMemo(() => detectFormat(input), [input]);
+
+  useEffect(() => {
+    document.title = "traVRS · inspect a variant";
+    if (boot.current.autorun) void run(boot.current.value);
+    // first paint only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function run(value: string) {
     const next = value.trim();
@@ -91,13 +122,9 @@ export default function App() {
 
   return (
     <div className="page">
-      <header>
-        <div className="wordmark">
-          tra<span className="vrs">VRS</span>
-        </div>
-        <p className="subline">pronounced traverse</p>
-        <p className="lede">Paste HGVS, SPDI, gnomAD/VCF, or VRS JSON.</p>
-      </header>
+      <SiteHeader>
+        <p className="lede">Accepts HGVS, SPDI, gnomAD/VCF, or VRS JSON.</p>
+      </SiteHeader>
 
       <form className="field" onSubmit={onSubmit}>
         <label className="field-label" htmlFor="variant">
@@ -160,7 +187,24 @@ export default function App() {
         <div className="error">
           <h2>Not a VRS Allele yet</h2>
           <p>{explainFailure(result)}</p>
-          {result.detection_note && <pre>{result.detection_note}</pre>}
+          {isUnknownFormat(result) && (
+            <>
+              <ul className="error-examples">
+                {UNKNOWN_EXAMPLES.map((example) => (
+                  <li key={example.label}>
+                    <span className="error-ex-label">{example.label}</span>
+                    <code>{example.value}</code>
+                  </li>
+                ))}
+              </ul>
+              <p className="error-later">
+                Detected later: ClinVar, rsID, ClinGen CA, VRS IDs.
+              </p>
+            </>
+          )}
+          {result.detection_note && !isUnknownFormat(result) && (
+            <pre>{result.detection_note}</pre>
+          )}
         </div>
       )}
 
@@ -173,9 +217,17 @@ export default function App() {
               {copied ? "Copied" : "Copy"}
             </button>
           </div>
-          {result.location_id && (
-            <div className="location">location {result.location_id}</div>
-          )}
+          <div className="id-meta">
+            {result.location_id && (
+              <div className="location">location {result.location_id}</div>
+            )}
+            {result.allele && (
+              <details className="json-block">
+                <summary>VRS Allele JSON</summary>
+                <pre>{JSON.stringify(result.allele, null, 2)}</pre>
+              </details>
+            )}
+          </div>
 
           <Trace
             events={result.trace}
@@ -186,29 +238,10 @@ export default function App() {
             reference={result.reference_at_location}
             equivalents={result.equivalents}
           />
-
-          {result.allele && (
-            <details className="json-block">
-              <summary>VRS Allele JSON</summary>
-              <pre>{JSON.stringify(result.allele, null, 2)}</pre>
-            </details>
-          )}
         </section>
       )}
 
-      <footer className="footer">
-        <div>
-          {result?.versions
-            ? `vrs-python ${result.versions.vrs_python ?? "?"}  ·  traVRS ${result.versions.travrs ?? "?"}`
-            : "vrs-python via POST /api/inspect"}
-        </div>
-        <div>
-          Concepts from{" "}
-          <a href="https://doi.org/10.1016/j.xgen.2021.100027">
-            Wagner et al. 2021, Cell Genomics
-          </a>
-        </div>
-      </footer>
+      <SiteFooter here="inspect" versions={result?.versions} />
     </div>
   );
 }

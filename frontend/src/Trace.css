@@ -25,16 +25,10 @@
   color: var(--warn);
 }
 
-.mode-switch {
-  display: inline-flex;
+.fold {
+  background: transparent;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.mode-switch button {
-  background: transparent;
-  border: 0;
   color: var(--muted);
   cursor: pointer;
   font-family: var(--mono);
@@ -44,48 +38,41 @@
   padding: 4px 10px;
 }
 
-.mode-switch button.active {
-  background: var(--accent-dim);
+.fold:hover {
+  border-color: var(--accent);
   color: var(--accent);
 }
 
-/* outer pipeline bar */
+/* outer pipeline bar — one strip, seven equal columns */
 
 .pipeline {
-  display: flex;
-  align-items: stretch;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   margin: var(--s-3) 0 var(--s-4);
-  row-gap: var(--s-2);
-}
-
-.pipeline-node-wrap {
-  display: inline-flex;
-  align-items: stretch;
-}
-
-.pipeline-link {
-  display: inline-block;
-  width: 12px;
-  height: 1px;
-  margin-top: 14px;
-  background: var(--line);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
 .pipeline-node {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: 4px;
+  min-width: 0;
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.04em;
-  padding: 6px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  padding: 10px 8px 12px;
+  border: 0;
+  border-radius: 0;
+  border-right: 1px solid var(--line);
   color: var(--muted);
   background: transparent;
   text-align: left;
+}
+
+.pipeline-node:last-child {
+  border-right: 0;
 }
 
 button.pipeline-node {
@@ -93,8 +80,12 @@ button.pipeline-node {
 }
 
 button.pipeline-node:hover {
-  border-color: var(--accent);
   color: var(--text);
+  background: var(--surface);
+}
+
+button.pipeline-node:hover .pipeline-sub {
+  color: var(--muted);
 }
 
 .pipeline-label {
@@ -107,33 +98,53 @@ button.pipeline-node:hover {
   letter-spacing: 0;
   text-transform: none;
   color: var(--muted);
-  line-height: 1.3;
-  max-width: 9.5em;
+  line-height: 1.35;
 }
 
 .pipeline-node.done {
-  border-color: var(--accent-dim);
   color: var(--text);
 }
 
-.pipeline-node.done::before {
-  content: "✓ ";
-  color: var(--ok);
-}
-
 .pipeline-node.failed {
-  border-color: var(--bad);
   color: var(--bad);
 }
 
 .pipeline-node.current,
 .pipeline-node.selected {
-  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.pipeline-node.current .pipeline-sub,
+.pipeline-node.selected .pipeline-sub {
   color: var(--accent);
 }
 
 .pipeline-node.current {
   animation: node-pulse 1.1s ease-in-out infinite;
+}
+
+@media (max-width: 640px) {
+  .pipeline {
+    grid-template-columns: 1fr;
+  }
+
+  .pipeline-node {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--s-3);
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 8px 0;
+  }
+
+  .pipeline-node:last-child {
+    border-bottom: 0;
+  }
+
+  .pipeline-label {
+    flex: 0 0 8.5em;
+  }
 }
 
 @keyframes node-pulse {
@@ -240,6 +251,27 @@ button.pipeline-node:hover {
   font-size: 13px;
   line-height: 1.5;
   max-width: 60em;
+}
+
+.frame-fields {
+  margin-top: var(--s-3);
+}
+
+.frame-fields summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.frame-fields summary:hover {
+  color: var(--accent);
+}
+
+.frame-fields .frame-states {
+  margin-top: var(--s-2);
 }
 
 .frame-states {

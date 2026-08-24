@@ -263,9 +263,9 @@ def _intro_events(raw_allele: Any, detection: Detection, win: _RefWindow) -> lis
             "sequence_digest",
             "Accession → sequence digest",
             note=(
-                f"{input_label!r} resolves (via SeqRepo) to ga4gh:{acc}. A digest of the "
-                "sequence itself. The human label never enters the hash, which is why "
-                "RefSeq and Ensembl spellings of the same sequence give the same VRS ID."
+                f"{input_label!r} is a catalog name. SeqRepo resolves it to the sequence "
+                f"it names; VRS then keeps a digest of those letters (ga4gh:{acc}), not the name. "
+                "RefSeq and Ensembl spellings of the same molecule therefore hash to the same VRS ID."
             ),
             before={"accession": input_label},
             after={"refgetAccession": acc},
@@ -282,8 +282,9 @@ def _intro_events(raw_allele: Any, detection: Detection, win: _RefWindow) -> lis
                 "transcript_projection",
                 "Transcript coordinates via UTA",
                 note=(
-                    f"'{parsed.get('kind')}.' coordinates live in transcript space; the "
-                    "hgvs package + UTA map them onto the sequence before VRS sees them."
+                    f"HGVS {parsed.get('kind')}. numbers count bases on a transcript, not on "
+                    "the chromosome. The hgvs package and UTA project those coordinates onto "
+                    "the actual sequence before VRS sees an interval."
                 ),
                 refs=_REFS_SEQ,
                 glossary="transcript",
@@ -292,9 +293,9 @@ def _intro_events(raw_allele: Any, detection: Detection, win: _RefWindow) -> lis
 
     if start is not None and end is not None:
         note = (
-            f"The residue-numbered input becomes the inter-residue interval "
-            f"[{start}, {end}). Two cuts between bases. One interpretation for every "
-            "operation type; this is why VRS insists it is not merely '0-based'."
+            f"The pasted string numbered residues (the letters). VRS numbers the cuts "
+            f"between letters, written [{start}, {end}). One interval meaning for "
+            "substitution, deletion, and insertion — which is why this is not merely '0-based'."
         )
         if detection.fmt == "spdi":
             note = (
@@ -615,9 +616,9 @@ def _trace_normalization(
             "expand",
             "Expand to the full region of ambiguity",
             note=(
-                f"Interval widens to [{left_bound}, {right_bound}). VRS refuses to pick an "
-                "arbitrary position inside the repeat (HGVS shifts 3', VCF shifts left). "
-                "It represents the change over the whole region."
+                f"Interval widens to [{left_bound}, {right_bound}). "
+                "VRS refuses to pick an arbitrary position inside the repeat. "
+                "HGVS shifts 3′; VCF shifts left. VRS covers the whole region."
             ),
             before={"start": start, "end": end},
             after={"start": left_bound, "end": right_bound, "ref": ext_ref, "alt": ext_alt},
@@ -728,9 +729,9 @@ def _digest_events(obj: Any, kind: str, id_prefix: str, title_noun: str) -> tupl
             "serialize",
             f"Digest-serialize the {title_noun}",
             note=(
-                "Canonical JSON: nested identifiable objects replaced by their digests, "
-                "keys sorted, UTF-8, no whitespace. Non-inherent fields (id, label, …) "
-                "are excluded. Only digest-relevant content survives."
+                "To hash an object, VRS first turns it into a fixed string: canonical JSON, "
+                "keys sorted, no whitespace, nested identifiable objects replaced by their "
+                "digests. Assigned ids and labels are dropped. Only the inherent content is hashed."
             ),
             data={
                 "serialized": serialized.decode("utf-8"),
@@ -772,7 +773,7 @@ def _trace_digest(allele: Any) -> tuple[list[dict], bool]:
             "digest",
             "prefix",
             "Assemble the identifier",
-            note="namespace + type prefix + digest",
+            note="The digest is prefixed with the object type (VA for Allele) and the ga4gh namespace, forming a CURIE anyone can recompute.",
             after={"id": f"ga4gh:VA.{va_digest}"},
             data={"namespace": "ga4gh", "type_prefix": "VA", "digest": va_digest},
             refs=_REFS_DIGEST,

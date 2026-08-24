@@ -20,7 +20,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from travrs.env import apply_defaults
-from travrs.pipeline import JOURNEY, inspect
+from travrs.pipeline import JOURNEY, inspect, package_versions
 
 Fmt = Literal["hgvs", "spdi", "gnomad", "vrs"]
 _MAX_INPUT = 10_000
@@ -86,8 +86,8 @@ def _inspect_payload(
     on_progress=None,
     no_cache: bool = False,
 ) -> dict[str, Any]:
-    # v4: trace events carry widget data (catalog names, source json)
-    key = f"v4::{fmt or 'auto'}::{raw.strip()}"
+    # v6: 0–100 notes after VRS paper / spec pass
+    key = f"v6::{fmt or 'auto'}::{raw.strip()}"
     use_cache = os.environ.get("TRAVRS_NO_CACHE") != "1" and not no_cache
     if use_cache:
         cached = cache.get(key)
@@ -126,6 +126,11 @@ def root() -> dict[str, str]:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/versions")
+def api_versions() -> dict[str, str]:
+    return package_versions()
 
 
 @app.post("/api/inspect")
