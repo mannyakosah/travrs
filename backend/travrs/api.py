@@ -16,7 +16,7 @@ from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from travrs.env import apply_defaults
@@ -32,6 +32,37 @@ def _cache():
     root = Path(os.environ.get("TRAVRS_CACHE_DIR", ".cache/travrs"))
     root.mkdir(parents=True, exist_ok=True)
     return Cache(str(root))
+
+
+def _cors_origins() -> list[str]:
+    origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+    ]
+    extra = os.environ.get("TRAVRS_CORS_ORIGINS", "")
+    origins.extend(part.strip() for part in extra.split(",") if part.strip())
+    return origins
+
+
+def _static_dir() -> Path | None:
+    configured = os.environ.get("TRAVRS_STATIC_DIR", "").strip()
+    candidates = [Path(configured)] if configured else []
+    candidates.append(Path("/app/ui"))
+    for path in candidates:
+        if (path / "index.html").is_file():
+            return path
+    return None
+
+
+def _safe_static_file(root: Path, rel: str) -> Path | None:
+    candidate = (root / rel).resolve()
+    try:
+        candidate.relative_to(root.resolve())
+    except ValueError:
+        return None
+    return candidate if candidate.is_file() else None
 
 
 @asynccontextmanager
@@ -57,12 +88,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-    ],
+    allow_origins=_cors_origins(),
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -113,8 +139,13 @@ def _inspect_payload(
     return payload
 
 
+_STATIC = _static_dir()
+
+
 @app.get("/")
-def root() -> dict[str, str]:
+def root():
+    if _STATIC is not None:
+        return FileResponse(_STATIC / "index.html")
     return {
         "name": "traVRS",
         "pronunciation": "traverse",
@@ -191,6 +222,24 @@ def api_inspect_stream(body: InspectRequest):
     )
 
 
+if _STATIC is not None:
+    _UI = _STATIC
+
+    @app.get("/{full_path:path}")
+    def spa(full_path: str):
+        if full_path.startswith("api/") or full_path in {
+            "health",
+            "docs",
+            "redoc",
+            "openapi.json",
+        }:
+            raise HTTPException(status_code=404, detail="Not found")
+        found = _safe_static_file(_UI, full_path)
+        if found is not None:
+            return FileResponse(found)
+        return FileResponse(_UI / "index.html")
+
+
 def main() -> None:
     import uvicorn
 
@@ -198,7 +247,7 @@ def main() -> None:
     uvicorn.run(
         "travrs.api:app",
         host=os.environ.get("TRAVRS_HOST", "127.0.0.1"),
-        port=int(os.environ.get("TRAVRS_PORT", "8000")),
+        port=int(os.environ.get("PORT") or os.environ.get("TRAVRS_PORT", "8000")),
         reload=os.environ.get("TRAVRS_RELOAD", "1") == "1",
     )
 

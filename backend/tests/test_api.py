@@ -38,6 +38,12 @@ def test_health(client):
     assert client.get("/health").json() == {"status": "ok"}
 
 
+def test_root_json_without_ui(client):
+    body = client.get("/").json()
+    assert body["name"] == "traVRS"
+    assert body["inspect"] == "POST /api/inspect"
+
+
 def test_versions(client):
     body = client.get("/api/versions").json()
     assert "vrs_python" in body
@@ -98,6 +104,17 @@ def test_inspect_stream_emits_stages_then_result(client):
 def test_inspect_rejects_empty(client):
     response = client.post("/api/inspect", json={"input": "   "})
     assert response.status_code == 422
+
+
+def test_safe_static_file_rejects_escape(tmp_path):
+    from travrs.api import _safe_static_file
+
+    root = tmp_path / "ui"
+    root.mkdir()
+    (root / "index.html").write_text("<html></html>")
+    assert _safe_static_file(root, "index.html") == (root / "index.html").resolve()
+    assert _safe_static_file(root, "../index.html") is None
+    assert _safe_static_file(root, "missing.js") is None
 
 
 def test_example_contract_is_valid_json():

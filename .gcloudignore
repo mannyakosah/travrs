@@ -1,0 +1,15 @@
+.git
+.github
+.cursor
+.venv
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.cache
+frontend/node_modules
+frontend/dist
+backend/.cache
+traverse-docs
+.firebase
+.env
+.DS_Store
